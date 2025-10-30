@@ -888,11 +888,11 @@ def train(attn_implementation=None):
                 **bnb_model_from_pretrained_args
             )
         else:
-            model = transformers.AutoModelForCausalLM.from_pretrained(
+            from llava.model.language_model.llava_intern import LlavaInternForCausalLM
+            model = LlavaInternForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 cache_dir=training_args.cache_dir,
                 attn_implementation=training_args.attn_implementation,
-                trust_remote_code=True,
                 torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
                 **bnb_model_from_pretrained_args
             )
@@ -904,6 +904,7 @@ def train(attn_implementation=None):
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
             **bnb_model_from_pretrained_args
         )
+    model.config.use_cache = False
     model.config.use_cache = False
 
     if model_args.freeze_backbone:

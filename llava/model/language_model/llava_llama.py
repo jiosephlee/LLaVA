@@ -107,6 +107,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         inputs: Optional[torch.Tensor] = None,
         images: Optional[torch.Tensor] = None,
         image_sizes: Optional[torch.Tensor] = None,
+        smiles: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> Union[GenerateOutput, torch.LongTensor]:
         position_ids = kwargs.pop("position_ids", None)
@@ -114,7 +115,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         if "inputs_embeds" in kwargs:
             raise NotImplementedError("`inputs_embeds` is not supported")
 
-        if images is not None:
+        if images is not None or smiles is not None:
             (
                 inputs,
                 position_ids,
@@ -129,7 +130,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                 None,
                 None,
                 images,
-                image_sizes=image_sizes
+                image_sizes=image_sizes,
+                smiles=smiles
             )
         else:
             inputs_embeds = self.get_model().embed_tokens(inputs)
@@ -145,6 +147,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                                       inputs_embeds=None, **kwargs):
         images = kwargs.pop("images", None)
         image_sizes = kwargs.pop("image_sizes", None)
+        smiles = kwargs.pop("smiles", None)
         inputs = super().prepare_inputs_for_generation(
             input_ids, past_key_values=past_key_values, inputs_embeds=inputs_embeds, **kwargs
         )
@@ -152,6 +155,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
             inputs['images'] = images
         if image_sizes is not None:
             inputs['image_sizes'] = image_sizes
+        if smiles is not None:
+            inputs['smiles'] = smiles
         return inputs
 
 AutoConfig.register("llava_llama", LlavaConfig)
