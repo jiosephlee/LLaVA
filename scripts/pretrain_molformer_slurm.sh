@@ -62,7 +62,7 @@ apptainer exec --cleanenv --nv \
         --optim "paged_adamw_8bit" \
         --attn_implementation "sdpa" \
         --num_train_epochs 1 \
-        --per_device_train_batch_size 4 \
+        --per_device_train_batch_size 64 \
         --per_device_eval_batch_size 4 \
         --gradient_accumulation_steps 1 \
         --eval_strategy "no" \

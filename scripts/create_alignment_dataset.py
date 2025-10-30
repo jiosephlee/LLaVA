@@ -77,13 +77,13 @@ def main():
     parser.add_argument(
         "--output-path", 
         type=str, 
-        default="/Users/jlee0/Desktop/research/therapeutic-tuning/LLaVA/playground/data/llava_medex_alignment.json",
+        default="/Users/jlee0/Desktop/research/therapeutic-tuning/LLaVA/playground/data/llava_medex_alignment_1M.json",
         help="Path to save the output JSON alignment file."
     )
     parser.add_argument(
         "--num-rows", 
         type=int, 
-        default=100000,
+        default=1000000,
         help="Number of rows to process from the CSV file."
     )
     args = parser.parse_args()

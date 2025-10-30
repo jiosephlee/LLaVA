@@ -12,7 +12,7 @@ def preprocess_mol_instruct_data():
     """
     base_dir = os.path.dirname(os.path.dirname(__file__))
     data_dir = os.path.join(base_dir, 'playground', 'data', 'mol-instruct')
-    output_file = os.path.join(base_dir, 'playground', 'data', 'mol_instruct_full.json')
+    output_file = os.path.join(base_dir, 'playground', 'data', 'mol_instruct_1M.json')
 
     all_data = []
     json_files = glob.glob(os.path.join(data_dir, '*.json'))
