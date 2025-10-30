@@ -23,9 +23,24 @@ import pathlib
 from typing import Dict, Optional, Sequence, List
 
 import torch
+import numpy as np
+from tqdm import tqdm
 
 import transformers
 import tokenizers
+
+# Add therapeutic-tuning project root to path to import utils
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# TDC imports from therapeutic-tuning
+import utils.tdc_utils as tdc_utils
+import utils.tdc_data_utils as tdc_data_utils
+import utils.tdc_evaluation as tdc_eval
+import utils.tdc_prompts as tdc_prompts
+import utils.utils as utils
+
 
 from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from torch.utils.data import Dataset
@@ -74,6 +89,7 @@ class DataArguments:
     is_multimodal: bool = False
     image_folder: Optional[str] = field(default=None)
     image_aspect_ratio: str = 'square'
+    task_group_name: Optional[str] = field(default=None, metadata={"help": "Name of the TDC task group to train on."})
 
 
 @dataclass
@@ -110,6 +126,7 @@ class TrainingArguments(transformers.TrainingArguments):
     lora_bias: str = "none"
     mm_projector_lr: Optional[float] = None
     group_by_modality_length: bool = field(default=False)
+    attn_implementation: Optional[str] = field(default=None, metadata={"help": "The attention implementation to use in the model (e.g., 'flash_attention_2' or 'sdpa')."})
 
 
 def maybe_zero_3(param, ignore_status=False, name=None):
@@ -685,7 +702,13 @@ class LazySupervisedDataset(Dataset):
         length_list = []
         for sample in self.list_data_dict:
             cur_len = sum(len(conv['value'].split()) for conv in sample['conversations'])
-            cur_len = cur_len if 'image' in sample else -cur_len
+            if 'image' in sample:
+                cur_len = cur_len
+            elif 'smiles' in sample:
+                # Approximate length of SMILES string as tokens
+                cur_len += len(sample['smiles']) // 3
+            else:
+                cur_len = -cur_len
             length_list.append(cur_len)
         return length_list
 
@@ -694,6 +717,7 @@ class LazySupervisedDataset(Dataset):
         if isinstance(i, int):
             sources = [sources]
         assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
+        
         if 'image' in sources[0]:
             image_file = self.list_data_dict[i]['image']
             image_folder = self.data_args.image_folder
@@ -719,23 +743,27 @@ class LazySupervisedDataset(Dataset):
             sources = preprocess_multimodal(
                 copy.deepcopy([e["conversations"] for e in sources]),
                 self.data_args)
+        elif 'smiles' in sources[0]:
+            sources = preprocess_multimodal(
+                copy.deepcopy([e["conversations"] for e in sources]),
+                self.data_args)
         else:
             sources = copy.deepcopy([e["conversations"] for e in sources])
+            
         data_dict = preprocess(
             sources,
             self.tokenizer,
-            has_image=('image' in self.list_data_dict[i]))
+            has_image=('image' in self.list_data_dict[i] or 'smiles' in self.list_data_dict[i]))
         if isinstance(i, int):
             data_dict = dict(input_ids=data_dict["input_ids"][0],
                              labels=data_dict["labels"][0])
 
-        # image exist in the data
+        # multimodal data exist in the data
         if 'image' in self.list_data_dict[i]:
             data_dict['image'] = image
-        elif self.data_args.is_multimodal:
-            # image does not exist in the data, but the model is multimodal
-            crop_size = self.data_args.image_processor.crop_size
-            data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])
+        elif 'smiles' in self.list_data_dict[i]:
+            data_dict['smiles'] = self.list_data_dict[i]['smiles']
+
         return data_dict
 
 
@@ -769,6 +797,9 @@ class DataCollatorForSupervisedDataset(object):
                 batch['images'] = torch.stack(images)
             else:
                 batch['images'] = images
+        
+        if 'smiles' in instances[0]:
+            batch['smiles'] = [instance['smiles'] for instance in instances]
 
         return batch
 
@@ -776,8 +807,36 @@ class DataCollatorForSupervisedDataset(object):
 def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
                                 data_args) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
+    if data_args.task_group_name is not None:
+        print(f"--- Loading and preparing TDC data for task group: {data_args.task_group_name} ---")
+        tasks = tdc_data_utils.get_task_list(data_args.task_group_name)
+        combined_train_df, val_dfs, test_dfs = tdc_data_utils.load_multitask_data(
+            tasks, data_dir=os.path.join(project_root, 'data', 'TDC')
+        )
+        
+        def format_df_to_list_data_dict(df, split):
+            list_data = []
+            for _, row in df.iterrows():
+                prompt = tdc_prompts.row_to_text(row, split=split, dataset=row['task'], prompt_style="txgemma_v3", is_intern=True)
+                smiles = row['Drug']
+                
+                list_data.append({
+                    "id": f"tdc_{row['task']}_{split}_{len(list_data)}",
+                    "smiles": smiles,
+                    "conversations": [
+                        {"from": "human", "value": prompt},
+                        {"from": "gpt", "value": "A" if row['Y'] == 0 else "B"} # Match txgemma_v3 style
+                    ]
+                })
+            return list_data
+
+        list_data_dict = format_df_to_list_data_dict(combined_train_df, 'train')
+
+    else:
+        list_data_dict = json.load(open(data_args.data_path, "r"))
+
     train_dataset = LazySupervisedDataset(tokenizer=tokenizer,
-                                data_path=data_args.data_path,
+                                list_data_dict=list_data_dict,
                                 data_args=data_args)
     data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
     return dict(train_dataset=train_dataset,
@@ -824,10 +883,11 @@ def train(attn_implementation=None):
                 **bnb_model_from_pretrained_args
             )
         else:
-            model = LlavaLlamaForCausalLM.from_pretrained(
+            model = transformers.AutoModelForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 cache_dir=training_args.cache_dir,
-                attn_implementation=attn_implementation,
+                attn_implementation=training_args.attn_implementation,
+                trust_remote_code=True,
                 torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
                 **bnb_model_from_pretrained_args
             )
@@ -963,13 +1023,87 @@ def train(attn_implementation=None):
                     args=training_args,
                     **data_module)
 
+    # Start VRAM monitoring
+    torch.cuda.reset_peak_memory_stats()
+
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
     else:
         trainer.train()
+    
+    # Report Peak VRAM
+    peak_memory_gb = torch.cuda.max_memory_allocated() / (1024**3)
+    rank0_print(f"Peak GPU memory allocated during training: {peak_memory_gb:.2f} GB")
+
     trainer.save_state()
 
     model.config.use_cache = True
+    
+    # TDC Evaluation Logic
+    if data_args.task_group_name is not None:
+        log = utils.setup_logging()
+        log.info("--- Starting TDC Evaluation ---")
+
+        tasks = tdc_data_utils.get_task_list(data_args.task_group_name, log)
+        _, val_dfs, test_dfs = tdc_data_utils.load_multitask_data(
+            tasks, log, data_dir=os.path.join(project_root, 'data', 'TDC')
+        )
+
+        def get_predictions(df, split):
+            log.info(f"--- Getting predictions for {df['task'].iloc[0]} {split} set ---")
+            targets, preds = [], []
+            positive_token, negative_token = "B", "A"
+
+            for _, row in tqdm(df.iterrows(), total=len(df), desc=f"Inference on {split} set"):
+                prompt = tdc_prompts.row_to_text(row, split=split, dataset=row['task'], prompt_style="txgemma_v3", is_intern=True)
+                smiles = row['Drug']
+                gt_answer = row['Y']
+                
+                input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(model.device)
+                
+                with torch.no_grad():
+                    output = model.generate(input_ids=input_ids, smiles=[smiles], max_new_tokens=1, use_cache=True)
+                
+                decoded_output = tokenizer.decode(output[0, -1]).strip()
+
+                if positive_token in decoded_output: score = 1.0
+                elif negative_token in decoded_output: score = 0.0
+                else: score = 0.5
+
+                targets.append(gt_answer)
+                preds.append(score)
+
+            return np.array(targets), np.array(preds)
+
+        val_scores, test_scores = {}, {}
+        for task in tasks:
+            metric = tdc_utils.TASK_METRICS[task]
+            val_targets, val_preds = get_predictions(val_dfs[task], 'Validation')
+            val_scores[task] = tdc_eval.calculate_metric_score(val_targets, val_preds, metric, log)
+
+            test_targets, test_preds = get_predictions(test_dfs[task], 'Test')
+            test_scores[task] = tdc_eval.calculate_metric_score(test_targets, test_preds, metric, log)
+
+        log.info("--- Aggregating and Saving TDC Results ---")
+        avg_val_score, std_val_score = tdc_eval.aggregate_scores(val_scores, 'overall')
+        avg_test_score, std_test_score = tdc_eval.aggregate_scores(test_scores, 'overall')
+        
+        eval_results = {
+            'per_task_val': val_scores, 'per_task_test': test_scores,
+            'avg_val': avg_val_score, 'std_val': std_val_score,
+            'avg_test': avg_test_score, 'std_test': std_test_score
+        }
+        log.info(f"Average Validation Score: {avg_val_score:.4f} (+/- {std_val_score:.4f})")
+        log.info(f"Average Test Score: {avg_test_score:.4f} (+/- {std_test_score:.4f})")
+
+        results_dir = os.path.join(training_args.output_dir, "tdc_results")
+        hyperparameters = {
+            "model_args": model_args.__dict__, 
+            "data_args": data_args.__dict__,
+            "training_args": training_args.to_dict()
+        }
+        tdc_eval.save_all_results(results_dir, model_args.model_name_or_path, data_args.task_group_name, tasks, eval_results, hyperparameters, log)
+
 
     if training_args.lora_enable:
         state_dict = get_peft_state_maybe_zero_3(
