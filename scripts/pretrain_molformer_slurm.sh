@@ -7,9 +7,9 @@
 #SBATCH --gres=gpu:a100:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=160GB
-#SBATCH --job-name=i-hadyn-abl
-#SBATCH --output=logs/output_i_hadyn_abl.out
-#SBATCH --error=logs/error_i_hadyn_abl.err
+#SBATCH --job-name=llava
+#SBATCH --output=logs/llava.out
+#SBATCH --error=logs/llava.err
 
 echo "➤ START"
 
