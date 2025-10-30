@@ -894,6 +894,7 @@ def train(attn_implementation=None):
                 trust_remote_code=True
             )
             config.attention_bias = False
+            print(config)
             model = LlavaInternForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 config=config,
@@ -977,7 +978,8 @@ def train(attn_implementation=None):
     elif model_args.version == "v0.5":
         tokenizer.pad_token = tokenizer.unk_token
     else:
-        tokenizer.pad_token = tokenizer.unk_token
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
         if model_args.version in conversation_lib.conv_templates:
             conversation_lib.default_conversation = conversation_lib.conv_templates[model_args.version]
         else:
