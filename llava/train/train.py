@@ -83,7 +83,7 @@ class ModelArguments:
     mm_use_im_start_end: bool = field(default=False)
     mm_use_im_patch_token: bool = field(default=True)
     mm_patch_merge_type: Optional[str] = field(default='flat')
-    mm_vision_select_feature: Optional[str] = field(default="pooler")
+    mm_vision_select_feature: Optional[str] = field(default="last_hidden_state")
 
 
 @dataclass
@@ -893,9 +893,6 @@ def train(attn_implementation=None):
                 model_args.model_name_or_path, 
                 trust_remote_code=True
             )
-            print("YOO")
-            config.attention_bias = False
-            print(config)
             model = LlavaInternForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 config=config,
@@ -910,9 +907,6 @@ def train(attn_implementation=None):
             model_args.model_name_or_path, 
             trust_remote_code=True
         )
-        print("oh")
-        config.attention_bias = False
-        print(config)
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             cache_dir=training_args.cache_dir,

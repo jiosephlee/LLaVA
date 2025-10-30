@@ -55,7 +55,7 @@ apptainer exec --cleanenv --nv \
         --mm_vision_select_layer -2 \
         --mm_use_im_start_end False \
         --mm_use_im_patch_token False \
-        --image_aspect_ratio pad \
+        --mm_vision_select_feature "last_hidden_state" \
         --group_by_modality_length True \
         --bf16 True \
         --output_dir $OUTPUT_DIR \

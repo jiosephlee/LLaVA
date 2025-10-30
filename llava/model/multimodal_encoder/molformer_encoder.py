@@ -13,7 +13,7 @@ class MolFormerTower(nn.Module):
         # NOTE: MolFormer doesn't have a direct equivalent to 'select_layer' like CLIP.
         # We will likely use the output of the last hidden state or a pooled output.
         # For now, this is a placeholder.
-        self.select_feature = getattr(args, 'mm_vision_select_feature', 'pooler') 
+        self.select_feature = getattr(args, 'mm_vision_select_feature') 
 
         if not delay_load:
             self.load_model()
@@ -36,9 +36,13 @@ class MolFormerTower(nn.Module):
     def feature_select(self, forward_outs):
         if self.select_feature == 'pooler':
             # Use the pooled output which is suitable for sentence-level classification tasks
-            return forward_outs.pooler_output
+            # Reshape from (batch_size, hidden_size) to (batch_size, 1, hidden_size)
+            # to be compatible with LLaVA's expectation of a sequence of features.
+            print(forward_outs.pooler_output.shape)
+            return forward_outs.pooler_output.unsqueeze(1)
         elif self.select_feature == 'last_hidden_state':
             # Use the last hidden state
+            print(forward_outs.last_hidden_state.shape)
             return forward_outs.last_hidden_state
         else:
             raise ValueError(f'Unexpected select feature: {self.select_feature}')

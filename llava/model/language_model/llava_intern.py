@@ -31,6 +31,11 @@ from ..llava_arch import LlavaMetaModel, LlavaMetaForCausalLM
 class LlavaInternConfig(Qwen2Config):
     model_type = "llava_intern"
 
+    def __init__(self, **kwargs):
+        # Force attention_bias to be False for this model architecture
+        kwargs['attention_bias'] = False
+        super().__init__(**kwargs)
+
 
 class LlavaInternModel(LlavaMetaModel, Qwen2Model):
     config_class = LlavaInternConfig
