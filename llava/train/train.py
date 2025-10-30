@@ -893,7 +893,7 @@ def train(attn_implementation=None):
                 model_args.model_name_or_path, 
                 trust_remote_code=True
             )
-            # config.attention_bias = False
+            config.attention_bias = False
             model = LlavaInternForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 config=config,
