@@ -16,8 +16,6 @@
 # IMPORTANT: This script must be submitted with `sbatch` from the root of the LLaVA project.
 
 echo "➤ START"
-echo "➤ LLaVA Project Root: $LLAVA_ROOT"
-
 echo "➤ SETTING UP HOST CUDA"
 module unload cuda
 module load cuda/12.4
@@ -46,7 +44,7 @@ OUTPUT_DIR="checkpoints/llava-$MODEL_NAME-molformer-pretrain"
 apptainer exec --cleanenv --nv \
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
     ${YOUR_SIF_FILE} \
-    python llava/train/train.py" \
+    python llava/train/train.py \
         --model_name_or_path $MODEL_NAME \
         --version v1 \
         --data_path $DATA_PATH \
