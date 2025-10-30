@@ -2,11 +2,11 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=6
+#SBATCH --cpus-per-task=4
 #SBATCH --time=2:00:00
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:a40:1
 #SBATCH --partition=ai
-#SBATCH --mem-per-gpu=160GB
+#SBATCH --mem-per-gpu=96GB
 #SBATCH --job-name=llava
 #SBATCH --output=logs/llava.out
 #SBATCH --error=logs/llava.err
@@ -55,15 +55,17 @@ apptainer exec --cleanenv --nv \
         --group_by_modality_length True \
         --bf16 True \
         --output_dir $OUTPUT_DIR \
+        --optim "paged_adamw_8bit" \
+        --attn_implementation "sdpa" \
         --num_train_epochs 1 \
-        --per_device_train_batch_size 16 \
+        --per_device_train_batch_size 4 \
         --per_device_eval_batch_size 4 \
         --gradient_accumulation_steps 1 \
         --evaluation_strategy "no" \
         --save_strategy "no" \
         --save_steps 24000 \
         --save_total_limit 1 \
-        --learning_rate 1e-4 \
+        --learning_rate 1e-3 \
         --weight_decay 0. \
         --warmup_ratio 0.03 \
         --lr_scheduler_type "cosine" \
