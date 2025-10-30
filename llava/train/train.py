@@ -16,6 +16,7 @@
 
 import os
 import copy
+import sys
 from dataclasses import dataclass, field
 import json
 import logging
@@ -25,9 +26,13 @@ from typing import Dict, Optional, Sequence, List
 import torch
 import numpy as np
 from tqdm import tqdm
-import sys
 import transformers
 import tokenizers
+
+# Add LLaVA project root to Python path to allow llava imports
+llava_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if llava_project_root not in sys.path:
+    sys.path.insert(0, llava_project_root)
 
 # Add therapeutic-tuning project root to path to import utils
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
