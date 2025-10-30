@@ -83,7 +83,7 @@ def main():
     parser.add_argument(
         "--num-rows", 
         type=int, 
-        default=1000000,
+        default=10000,
         help="Number of rows to process from the CSV file."
     )
     args = parser.parse_args()

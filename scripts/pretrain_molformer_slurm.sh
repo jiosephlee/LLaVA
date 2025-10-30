@@ -82,3 +82,53 @@ apptainer exec --cleanenv --nv \
         --report_to wandb
 
 echo "➤ DONE"
+
+
+# --- Configuration ---
+# Set the path to your fully trained Chem-LLaVA model checkpoint
+# This should be the model that has already been pre-trained/aligned.
+MODEL_PATH="./checkpoints/llava-internlm/Intern-S1-mini-molformer-pretrain"
+
+# Set the TDC task group you want to fine-tune on
+# e.g., "Tox", "ADMET_group", "Skin_Reaction"
+TDC_TASK_GROUP="Tox"
+
+# Set the output directory for this TDC fine-tuning run
+OUTPUT_DIR="./checkpoints/llava-internlm/Intern-S1-mini-tdc-$TDC_TASK_GROUP-finetune"
+
+
+apptainer exec --cleanenv --nv \
+    --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
+    ${YOUR_SIF_FILE} \
+    python llava/train/train.py \
+    --model_name_or_path $MODEL_PATH \
+    --pretrain_mm_mlp_adapter $MODEL_PATH/mm_projector.bin \
+    --version v1 \
+    --task_group_name $TDC_TASK_GROUP \
+    --mm_projector_type mlp2x_gelu \
+    --mm_vision_select_layer -2 \
+    --image_aspect_ratio pad \
+    --group_by_modality_length True \
+    --bf16 True \
+    --optim "paged_adamw_8bit" \
+    --attn_implementation "sdpa" \
+    --output_dir $OUTPUT_DIR \
+    --num_train_epochs 10 \
+    --per_device_train_batch_size 4 \
+    --per_device_eval_batch_size 4 \
+    --gradient_accumulation_steps 1 \
+    --eval_strategy "no" \
+    --save_strategy "no" \
+    --save_steps 2000 \
+    --save_total_limit 1 \
+    --learning_rate 8e-5 \
+    --weight_decay 0. \
+    --warmup_ratio 0.03 \
+    --lr_scheduler_type "cosine" \
+    --logging_steps 1 \
+    --tf32 True \
+    --model_max_length 2048 \
+    --gradient_checkpointing True \
+    --dataloader_num_workers 4 \
+    --lazy_preprocess True \
+    --report_to wandb

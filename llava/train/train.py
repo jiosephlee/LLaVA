@@ -893,6 +893,7 @@ def train(attn_implementation=None):
                 model_args.model_name_or_path, 
                 trust_remote_code=True
             )
+            config.attention_bias = False
             model = LlavaInternForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 config=config,
@@ -907,6 +908,7 @@ def train(attn_implementation=None):
             model_args.model_name_or_path, 
             trust_remote_code=True
         )
+        config.attention_bias = False
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             cache_dir=training_args.cache_dir,
@@ -917,8 +919,7 @@ def train(attn_implementation=None):
             **bnb_model_from_pretrained_args
         )
     model.config.use_cache = False
-    model.config.use_cache = False
-
+    
     if model_args.freeze_backbone:
         model.model.requires_grad_(False)
 

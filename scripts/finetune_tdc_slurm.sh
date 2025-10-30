@@ -1,7 +1,30 @@
-#!/bin/bash
+#!/bin/sh
 
-# This script is for fine-tuning a Chem-LLaVA model on TDC tasks.
-# IMPORTANT: This script should be run from the root of the LLaVA project directory.
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --time=2:00:00
+#SBATCH --gres=gpu:a40:1
+#SBATCH --partition=ai
+#SBATCH --mem-per-gpu=96GB
+#SBATCH --job-name=llava
+#SBATCH --output=logs/llava.out
+#SBATCH --error=logs/llava.err
+
+# --- Robust Path Setup ---
+# Use the SLURM_SUBMIT_DIR variable to get the directory where the sbatch command was run.
+# IMPORTANT: This script must be submitted with `sbatch` from the root of the LLaVA project.
+
+echo "➤ START"
+echo "➤ SETTING UP HOST CUDA"
+module unload cuda
+module load cuda/12.4
+
+
+# Define the path to your SIF file
+YOUR_SIF_FILE="/gpfs/fs001/cbica/home/leejose/joseph/pytorch-2.4.0-cuda12.4-cudnn9-devel.sif"
+
+echo "➤ RUNNING SCRIPT INSIDE APPTAINER: ${YOUR_SIF_FILE}"
 
 # --- Configuration ---
 # Set the path to your fully trained Chem-LLaVA model checkpoint
