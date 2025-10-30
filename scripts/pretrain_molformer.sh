@@ -2,10 +2,7 @@
 
 # This script is for the alignment pre-training of a Chem-LLaVA model.
 # It trains the multimodal projector to connect MolFormer to the LLM.
-
-# --- Robust Path Setup ---
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-LLAVA_ROOT=$(dirname "$SCRIPT_DIR")
+# IMPORTANT: This script should be run from the root of the LLaVA project directory.
 
 # --- Configuration ---
 # Set the base language model (Intern-S1)

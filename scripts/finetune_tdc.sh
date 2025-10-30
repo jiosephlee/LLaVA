@@ -1,27 +1,24 @@
 #!/bin/bash
 
 # This script is for fine-tuning a Chem-LLaVA model on TDC tasks.
-
-# --- Robust Path Setup ---
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-LLAVA_ROOT=$(dirname "$SCRIPT_DIR")
+# IMPORTANT: This script should be run from the root of the LLaVA project directory.
 
 # --- Configuration ---
 # Set the path to your fully trained Chem-LLaVA model checkpoint
 # This should be the model that has already been pre-trained/aligned.
-MODEL_PATH="$LLAVA_ROOT/checkpoints/llava-internlm/Intern-S1-mini-molformer-pretrain"
+MODEL_PATH="./checkpoints/llava-internlm/Intern-S1-mini-molformer-pretrain"
 
 # Set the TDC task group you want to fine-tune on
 # e.g., "Tox", "ADMET_group", "Skin_Reaction"
 TDC_TASK_GROUP="Tox"
 
 # Set the output directory for this TDC fine-tuning run
-OUTPUT_DIR="$LLAVA_ROOT/checkpoints/llava-internlm/Intern-S1-mini-tdc-$TDC_TASK_GROUP-finetune"
+OUTPUT_DIR="./checkpoints/llava-internlm/Intern-S1-mini-tdc-$TDC_TASK_GROUP-finetune"
 
 # --- Training Command ---
-# deepspeed "$LLAVA_ROOT/llava/train/train.py" \
-#    --deepspeed "$LLAVA_ROOT/scripts/zero3.json" \
-python "$LLAVA_ROOT/llava/train/train.py" \
+# deepspeed llava/train/train.py \
+#    --deepspeed ./scripts/zero3.json \
+python llava/train/train.py \
     --model_name_or_path $MODEL_PATH \
     --version v1 \
     --task_group_name $TDC_TASK_GROUP \

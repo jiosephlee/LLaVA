@@ -12,10 +12,8 @@
 #SBATCH --error=logs/llava.err
 
 # --- Robust Path Setup ---
-# Get the directory of this script
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-# Assume the script is in 'scripts', so the project root is one level up
-LLAVA_ROOT=$(dirname "$SCRIPT_DIR")
+# Use the SLURM_SUBMIT_DIR variable to get the directory where the sbatch command was run.
+# IMPORTANT: This script must be submitted with `sbatch` from the root of the LLaVA project.
 
 echo "➤ START"
 echo "➤ LLaVA Project Root: $LLAVA_ROOT"
@@ -37,10 +35,10 @@ MODEL_NAME="haydn-jones/Intern-S1-mini-Qwen3-8B"
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
 # Set the path to your prepared alignment dataset
-DATA_PATH="$LLAVA_ROOT/playground/data/llava_medex_alignment.json"
+DATA_PATH="playground/data/llava_medex_alignment.json"
 
 # Set the output directory for the pre-trained projector and model weights
-OUTPUT_DIR="$LLAVA_ROOT/checkpoints/llava-$MODEL_NAME-molformer-pretrain"
+OUTPUT_DIR="checkpoints/llava-$MODEL_NAME-molformer-pretrain"
 
 # Execute the python script INSIDE the container
 # --nv: Mounts the host NVIDIA drivers
@@ -48,7 +46,7 @@ OUTPUT_DIR="$LLAVA_ROOT/checkpoints/llava-$MODEL_NAME-molformer-pretrain"
 apptainer exec --cleanenv --nv \
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
     ${YOUR_SIF_FILE} \
-    python "$LLAVA_ROOT/llava/train/train.py" \
+    python llava/train/train.py" \
         --model_name_or_path $MODEL_NAME \
         --version v1 \
         --data_path $DATA_PATH \
