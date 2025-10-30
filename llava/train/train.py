@@ -83,7 +83,7 @@ class ModelArguments:
     mm_use_im_start_end: bool = field(default=False)
     mm_use_im_patch_token: bool = field(default=True)
     mm_patch_merge_type: Optional[str] = field(default='flat')
-    mm_vision_select_feature: Optional[str] = field(default="patch")
+    mm_vision_select_feature: Optional[str] = field(default="pooler")
 
 
 @dataclass
@@ -875,7 +875,7 @@ def train(attn_implementation=None):
                 bnb_4bit_quant_type=training_args.quant_type # {'fp4', 'nf4'}
             )
         ))
-
+    print("before vision tower")
     if model_args.vision_tower is not None:
         if 'mpt' in model_args.model_name_or_path:
             config = transformers.AutoConfig.from_pretrained(model_args.model_name_or_path, trust_remote_code=True)
@@ -893,6 +893,7 @@ def train(attn_implementation=None):
                 model_args.model_name_or_path, 
                 trust_remote_code=True
             )
+            print("YOO")
             config.attention_bias = False
             print(config)
             model = LlavaInternForCausalLM.from_pretrained(
@@ -905,11 +906,19 @@ def train(attn_implementation=None):
                 **bnb_model_from_pretrained_args
             )
     else:
+        config = transformers.AutoConfig.from_pretrained(
+            model_args.model_name_or_path, 
+            trust_remote_code=True
+        )
+        print("oh")
+        config.attention_bias = False
+        print(config)
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             cache_dir=training_args.cache_dir,
             attn_implementation=attn_implementation,
             trust_remote_code=True,
+            config=config,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
             **bnb_model_from_pretrained_args
         )
