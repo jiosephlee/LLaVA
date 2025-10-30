@@ -890,8 +890,14 @@ def train(attn_implementation=None):
             )
         else:
             from llava.model.language_model.llava_intern import LlavaInternForCausalLM
+            config = transformers.AutoConfig.from_pretrained(
+                model_args.model_name_or_path, 
+                trust_remote_code=True
+            )
+            # config.attention_bias = False
             model = LlavaInternForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
+                config=config,
                 cache_dir=training_args.cache_dir,
                 attn_implementation=training_args.attn_implementation,
                 trust_remote_code=True,
@@ -987,7 +993,8 @@ def train(attn_implementation=None):
         vision_tower = model.get_vision_tower()
         vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
 
-        data_args.image_processor = vision_tower.image_processor
+        if hasattr(vision_tower, 'image_processor'):
+            data_args.image_processor = vision_tower.image_processor
         data_args.is_multimodal = True
 
         model.config.image_aspect_ratio = data_args.image_aspect_ratio
