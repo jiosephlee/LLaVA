@@ -34,7 +34,7 @@ MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
 # Set the path to your prepared alignment dataset
-DATA_PATH="playground/data/llava_medex_alignment.json"
+DATA_PATH="playground/data/llava_medex_alignment_10k.json"
 
 # Set the output directory for the pre-trained projector and model weights
 OUTPUT_DIR="checkpoints/llava-$MODEL_NAME-molformer-pretrain"
@@ -61,7 +61,7 @@ apptainer exec --cleanenv --nv \
         --optim "paged_adamw_8bit" \
         --attn_implementation "flash_attention_2" \
         --num_train_epochs 1 \
-        --per_device_train_batch_size 64 \
+        --per_device_train_batch_size 16 \
         --per_device_eval_batch_size 4 \
         --gradient_accumulation_steps 1 \
         --eval_strategy "no" \
