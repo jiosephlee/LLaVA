@@ -23,6 +23,16 @@ import logging
 import pathlib
 from typing import Dict, Optional, Sequence
 
+# Add LLaVA project root to Python path to allow llava imports
+llava_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if llava_project_root not in sys.path:
+    sys.path.insert(0, llava_project_root)
+
+# Add therapeutic-tuning project root to path to import utils
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+    
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -39,16 +49,6 @@ from llava.model import *
 from llava.mm_utils import tokenizer_image_token
 
 from PIL import Image
-
-# Add LLaVA project root to Python path to allow llava imports
-llava_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if llava_project_root not in sys.path:
-    sys.path.insert(0, llava_project_root)
-
-# Add therapeutic-tuning project root to path to import utils
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 # TDC imports from therapeutic-tuning
 import utils.tdc_utils as tdc_utils
