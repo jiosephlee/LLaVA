@@ -28,7 +28,7 @@ echo "➤ RUNNING SCRIPT INSIDE APPTAINER: ${YOUR_SIF_FILE}"
 
 # --- Configuration ---
 # Set the base language model (Intern-S1)
-MODEL_NAME="haydn-jones/Intern-S1-mini-Qwen3-8B"
+MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
 
 # Set the molecule encoder model (MolFormer)
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"

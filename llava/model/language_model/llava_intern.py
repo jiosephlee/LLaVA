@@ -42,17 +42,39 @@ class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
     config_class = LlavaInternConfig
 
     def __init__(self, config):
-        print(config)
-        config.attention_bias = False
         super(Qwen3ForCausalLM, self).__init__(config)
-        print(config)
         self.model = LlavaInternModel(config)
-        print(self.model)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        """
+        Manually implements the from_pretrained logic to make the process explicit.
+        """
+        # 1. Load the pretrained Qwen3 model from Hugging Face.
+        #    This gives us a standard Qwen3 model with all the language model weights.
+        qwen_model = Qwen3ForCausalLM.from_pretrained(
+            pretrained_model_name_or_path,
+            *model_args,
+            **kwargs
+        )
+
+        # 2. Create an instance of our custom LlavaInternForCausalLM class.
+        #    We use the configuration from the loaded Qwen model to ensure consistency.
+        config = qwen_model.config
+        model = cls(config)
+
+        # 3. Copy the weights from the loaded Qwen model to our new Llava model.
+        #    `strict=False` is important here. It allows us to load the state dict
+        #    even if our Llava model has extra parameters (like vision tower components)
+        #    that are not present in the original Qwen model.
+        model.load_state_dict(qwen_model.state_dict(), strict=False)
+
+        return model
 
     def get_model(self):
         return self.model
