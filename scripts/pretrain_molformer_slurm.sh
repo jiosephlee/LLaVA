@@ -96,7 +96,6 @@ TDC_TASK_GROUP="Tox"
 # Set the output directory for this TDC fine-tuning run
 OUTPUT_DIR="./checkpoints/llava-internlm/Intern-S1-mini-tdc-$TDC_TASK_GROUP-finetune"
 
-
 apptainer exec --cleanenv --nv \
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
     ${YOUR_SIF_FILE} \

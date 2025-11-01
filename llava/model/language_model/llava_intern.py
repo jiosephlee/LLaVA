@@ -19,8 +19,7 @@ import torch
 import torch.nn as nn
 
 from transformers import AutoConfig, AutoModelForCausalLM
-from transformers.models.qwen2.modeling_qwen2 import Qwen2ForCausalLM, Qwen2Model
-from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
+from transformers import Qwen3ForCausalLM, Qwen3Model, Qwen3Config
 
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.generation.utils import GenerateOutput
@@ -28,26 +27,27 @@ from transformers.generation.utils import GenerateOutput
 from ..llava_arch import LlavaMetaModel, LlavaMetaForCausalLM
 
 
-class LlavaInternConfig(Qwen2Config):
+class LlavaInternConfig(Qwen3Config):
     model_type = "llava_intern"
 
 
-class LlavaInternModel(LlavaMetaModel, Qwen2Model):
+class LlavaInternModel(LlavaMetaModel, Qwen3Model):
     config_class = LlavaInternConfig
 
-    def __init__(self, config: Qwen2Config):
+    def __init__(self, config: Qwen3Config):
         super(LlavaInternModel, self).__init__(config)
 
 
-class LlavaInternForCausalLM(Qwen2ForCausalLM, LlavaMetaForCausalLM):
+class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
     config_class = LlavaInternConfig
 
     def __init__(self, config):
         print(config)
         config.attention_bias = False
-        super(Qwen2ForCausalLM, self).__init__(config)
+        super(Qwen3ForCausalLM, self).__init__(config)
         print(config)
         self.model = LlavaInternModel(config)
+        print(self.model)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
