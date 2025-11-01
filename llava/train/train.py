@@ -50,6 +50,8 @@ from llava.mm_utils import tokenizer_image_token
 
 from PIL import Image
 
+from llava.model.language_model.llava_intern import DebugLlavaInternForCausalLM
+
 # TDC imports from therapeutic-tuning
 import utils.tdc_utils as tdc_utils
 import utils.tdc_data_utils as tdc_data_utils
@@ -131,6 +133,7 @@ class TrainingArguments(transformers.TrainingArguments):
     mm_projector_lr: Optional[float] = None
     group_by_modality_length: bool = field(default=False)
     attn_implementation: Optional[str] = field(default=None, metadata={"help": "The attention implementation to use in the model (e.g., 'flash_attention_2' or 'sdpa')."})
+    debug_mode: bool = field(default=False, metadata={"help": "Enable debug mode for verbose output."})
 
 
 def maybe_zero_3(param, ignore_status=False, name=None):
@@ -681,6 +684,7 @@ class LazySupervisedDataset(Dataset):
 
     def __init__(self, tokenizer: transformers.PreTrainedTokenizer,
                  data_args: DataArguments,
+                 training_args: TrainingArguments,
                  list_data_dict: list):
         super(LazySupervisedDataset, self).__init__()
 
@@ -688,6 +692,7 @@ class LazySupervisedDataset(Dataset):
         self.tokenizer = tokenizer
         self.list_data_dict = list_data_dict
         self.data_args = data_args
+        self.training_args = training_args
 
     def __len__(self):
         return len(self.list_data_dict)
@@ -770,6 +775,30 @@ class LazySupervisedDataset(Dataset):
         elif 'smiles' in self.list_data_dict[i]:
             data_dict['smiles'] = smiles
 
+        if self.training_args.debug_mode:
+            print("--- Debugging LazySupervisedDataset __getitem__ ---")
+            print(f"Index: {i}")
+            print("Sources:", sources)
+            print("Data Dict Keys:", data_dict.keys())
+            for key, value in data_dict.items():
+                if isinstance(value, torch.Tensor):
+                    print(f"  {key}: shape={value.shape}, dtype={value.dtype}")
+                elif isinstance(value, dict):
+                     print(f"  {key}:")
+                     for sub_key, sub_value in value.items():
+                         if isinstance(sub_value, torch.Tensor):
+                            print(f"    {sub_key}: shape={sub_value.shape}, dtype={sub_value.dtype}")
+                         else:
+                            print(f"    {sub_key}: {sub_value}")
+                else:
+                    print(f"  {key}: {value}")
+            print("Labels:", data_dict.get("labels"))
+            unmasked_labels = data_dict.get("labels")[data_dict.get("labels") != IGNORE_INDEX]
+            print("Unmasked Labels:", unmasked_labels)
+            if len(unmasked_labels) > 0:
+                print("Decoded Unmasked Labels:", self.tokenizer.decode(unmasked_labels[unmasked_labels >= 0]))
+            print("--- End Debugging ---")
+
         return data_dict
 
 
@@ -778,6 +807,7 @@ class DataCollatorForSupervisedDataset(object):
     """Collate examples for supervised fine-tuning."""
 
     tokenizer: transformers.PreTrainedTokenizer
+    training_args: TrainingArguments
 
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
         input_ids, labels = tuple([instance[key] for instance in instances]
@@ -813,11 +843,35 @@ class DataCollatorForSupervisedDataset(object):
                 'attention_mask': smiles_attention_mask
             }
 
+        if self.training_args.debug_mode:
+            print("\n--- Debugging DataCollator ---")
+            print("Batch keys:", batch.keys())
+            for key, value in batch.items():
+                if isinstance(value, torch.Tensor):
+                    print(f"  {key}: shape={value.shape}, dtype={value.dtype}")
+                elif isinstance(value, dict):
+                     print(f"  {key}:")
+                     for sub_key, sub_value in value.items():
+                         if isinstance(sub_value, torch.Tensor):
+                            print(f"    {sub_key}: shape={sub_value.shape}, dtype={sub_value.dtype}")
+                         else:
+                            print(f"    {sub_key}: {sub_value}")
+                else:
+                    print(f"  {key}: {value}")
+            
+            unmasked_labels = batch['labels'][batch['labels'] != IGNORE_INDEX]
+            print("Unmasked labels in batch:", unmasked_labels)
+            if len(unmasked_labels) > 0:
+                print("Decoded unmasked labels:", self.tokenizer.decode(unmasked_labels[unmasked_labels >= 0]))
+            else:
+                print("No unmasked labels in this batch.")
+            print("--- End Debugging ---\n")
+            
         return batch
 
 
 def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
-                                data_args) -> Dict:
+                                data_args, training_args) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
     if data_args.task_group_name is not None:
         print(f"--- Loading and preparing TDC data for task group: {data_args.task_group_name} ---")
@@ -849,8 +903,9 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
 
     train_dataset = LazySupervisedDataset(tokenizer=tokenizer,
                                 list_data_dict=list_data_dict,
-                                data_args=data_args)
-    data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
+                                data_args=data_args,
+                                training_args=training_args)
+    data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer, training_args=training_args)
     return dict(train_dataset=train_dataset,
                 eval_dataset=None,
                 data_collator=data_collator)
@@ -902,7 +957,11 @@ def train(attn_implementation=None):
                 trust_remote_code=True
             )
             config.attention_bias = False
-            model = LlavaInternForCausalLM.from_pretrained(
+            
+            model_class = DebugLlavaInternForCausalLM if training_args.debug_mode else LlavaInternForCausalLM
+            print(f"--- Using model class: {model_class.__name__} ---")
+
+            model = model_class.from_pretrained(
                 model_args.model_name_or_path,
                 config=config,
                 cache_dir=training_args.cache_dir,
@@ -1050,7 +1109,8 @@ def train(attn_implementation=None):
                         module = module.to(torch.bfloat16)
 
     data_module = make_supervised_data_module(tokenizer=tokenizer,
-                                              data_args=data_args)
+                                              data_args=data_args,
+                                              training_args=training_args)
     trainer = LLaVATrainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,
@@ -1158,6 +1218,9 @@ def train(attn_implementation=None):
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,
                                        output_dir=training_args.output_dir)
+
+    # Pass tokenizer to training_args for use in debug class
+    training_args.tokenizer = tokenizer
 
 
 if __name__ == "__main__":

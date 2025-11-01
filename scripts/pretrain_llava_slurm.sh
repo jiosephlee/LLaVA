@@ -78,7 +78,8 @@ apptainer exec --cleanenv --nv \
         --gradient_checkpointing True \
         --dataloader_num_workers 4 \
         --lazy_preprocess True \
-        --report_to wandb
+        --report_to wandb \
+        --debug_mode True
 
 echo "➤ DONE"
 
@@ -129,4 +130,5 @@ apptainer exec --cleanenv --nv \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
     --lazy_preprocess True \
-    --report_to wandb
+    --report_to wandb \
+    --debug_mode True

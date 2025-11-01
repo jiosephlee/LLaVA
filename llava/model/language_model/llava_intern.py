@@ -26,6 +26,9 @@ from transformers.generation.utils import GenerateOutput
 
 from ..llava_arch import LlavaMetaModel, LlavaMetaForCausalLM
 
+import torch.nn.functional as F
+from llava.constants import IGNORE_INDEX
+
 
 class LlavaInternConfig(Qwen3Config):
     model_type = "llava_intern"
@@ -185,6 +188,104 @@ class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
         if smiles is not None:
             inputs['smiles'] = smiles
         return inputs
+
+class DebugLlavaInternForCausalLM(LlavaInternForCausalLM):
+    def forward(
+        self,
+        input_ids=None,
+        attention_mask=None,
+        position_ids=None,
+        past_key_values=None,
+        inputs_embeds=None,
+        labels=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        images=None,
+        image_sizes=None,
+        smiles=None,
+        return_dict=None,
+    ):
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        outputs = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+            images=images,
+            image_sizes=image_sizes,
+            smiles=smiles
+        )
+
+        hidden_states = outputs[0]
+        logits = self.lm_head(hidden_states)
+
+        loss = None
+        if labels is not None:
+            # Shift so that tokens < n predict n
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            # Flatten the tokens
+            loss_fct = nn.CrossEntropyLoss()
+            shift_logits = shift_logits.view(-1, self.config.vocab_size)
+            shift_labels = shift_labels.view(-1)
+            # Enable model parallelism
+            shift_labels = shift_labels.to(shift_logits.device)
+            loss = loss_fct(shift_logits, shift_labels)
+
+            if self.training_args.debug_mode:
+                print("\n--- Debugging Model Forward ---")
+                print("Logits shape:", logits.shape)
+                print("Labels shape:", labels.shape)
+                
+                # Get the predictions from the logits
+                predictions = torch.argmax(shift_logits, dim=-1)
+                
+                # Filter out ignored indices from labels and predictions
+                unmasked_indices = shift_labels != IGNORE_INDEX
+                unmasked_labels = shift_labels[unmasked_indices]
+                unmasked_predictions = predictions[unmasked_indices]
+                
+                print("Unmasked Labels sample:", unmasked_labels[:20])
+                print("Predictions sample:", unmasked_predictions[:20])
+                
+                if len(unmasked_labels) > 0:
+                    tokenizer = self.training_args.tokenizer
+                    print("Decoded Unmasked Labels sample:", tokenizer.decode(unmasked_labels[:20]))
+                    print("Decoded Predictions sample:", tokenizer.decode(unmasked_predictions[:20]))
+
+                    # Calculate accuracy
+                    correct_predictions = (unmasked_predictions == unmasked_labels).sum().item()
+                    total_unmasked = len(unmasked_labels)
+                    accuracy = correct_predictions / total_unmasked if total_unmasked > 0 else 0
+                    print(f"Accuracy on unmasked tokens: {accuracy:.4f}")
+
+                print("Calculated Loss:", loss.item())
+                print("--- End Debugging ---\n")
+
+        if not return_dict:
+            output = (logits,) + outputs[1:]
+            return (loss,) + output if loss is not None else output
+
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
 
 AutoConfig.register("llava_intern", LlavaInternConfig)
 AutoModelForCausalLM.register(LlavaInternConfig, LlavaInternForCausalLM)
