@@ -11,12 +11,12 @@ from llava import LlavaLlamaForCausalLM
 
 
 def apply_delta(base_model_path, target_model_path, delta_path):
-    print("Loading base model")
+    print(f"Loading base model from {base_model_path}")
     base = AutoModelForCausalLM.from_pretrained(
-        base_model_path, torch_dtype=torch.float16, low_cpu_mem_usage=True)
+        base_model_path, dtype=torch.float16, low_cpu_mem_usage=True)
 
-    print("Loading delta")
-    delta = LlavaLlamaForCausalLM.from_pretrained(delta_path, torch_dtype=torch.float16, low_cpu_mem_usage=True)
+    print(f"Loading delta from {delta_path}")
+    delta = LlavaLlamaForCausalLM.from_pretrained(delta_path, dtype=torch.float16, low_cpu_mem_usage=True)
     delta_tokenizer = AutoTokenizer.from_pretrained(delta_path)
 
     print("Applying delta")

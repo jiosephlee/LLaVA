@@ -49,6 +49,25 @@ class MolFormerVisionTower(nn.Module):
     def dummy_feature(self):
         return torch.randn(1, 3, 224, 224) # Placeholder for dummy feature
 
+    @property
+    def dtype(self):
+        return self.vision_tower.dtype
+
+    @property
+    def device(self):
+        return self.vision_tower.device
+
+    @property
+    def config(self):
+        if self.is_loaded:
+            return self.vision_tower.config
+        else:
+            return self.cfg_only
+
+    @property
+    def hidden_size(self):
+        return 768
+
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))

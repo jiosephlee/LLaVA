@@ -57,7 +57,7 @@ class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
         """
         # 1. Load the pretrained Qwen3 model from Hugging Face.
         #    This gives us a standard Qwen3 model with all the language model weights.
-        qwen_model = Qwen3ForCausalLM.from_pretrained(
+        qwen_model = AutoModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path,
             *model_args,
             **kwargs
