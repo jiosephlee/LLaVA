@@ -321,10 +321,6 @@ class LlavaMetaForCausalLM(ABC):
 
         new_input_embeds = torch.stack(new_input_embeds_padded, dim=0)
 
-        
-        print(new_input_embeds.requires_grad)
-        new_input_embeds.requires_grad = True
-
         if _labels is None:
             new_labels = None
         else:

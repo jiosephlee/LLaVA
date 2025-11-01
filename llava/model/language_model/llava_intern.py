@@ -70,7 +70,7 @@ class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
         output_hidden_states: Optional[bool] = None,
         images: Optional[torch.FloatTensor] = None,
         image_sizes: Optional[List[List[int]]] = None,
-        smiles: Optional[torch.FloatTensor] = None,
+        smiles: Optional[dict] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
@@ -112,7 +112,7 @@ class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
         inputs: Optional[torch.Tensor] = None,
         images: Optional[torch.Tensor] = None,
         image_sizes: Optional[torch.Tensor] = None,
-        smiles: Optional[torch.Tensor] = None,
+        smiles: Optional[dict] = None,
         **kwargs,
     ) -> Union[GenerateOutput, torch.LongTensor]:
         position_ids = kwargs.pop("position_ids", None)

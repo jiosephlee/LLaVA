@@ -52,15 +52,14 @@ apptainer exec --cleanenv --nv \
         --vision_tower $MOLECULE_TOWER \
         --mm_projector_type mlp2x_gelu \
         --tune_mm_mlp_adapter True \
-        --mm_vision_select_layer -2 \
         --mm_use_im_start_end False \
         --mm_use_im_patch_token False \
         --mm_vision_select_feature "last_hidden_state" \
-        --group_by_modality_length True \
+        --group_by_modality_length False \
         --bf16 True \
         --output_dir $OUTPUT_DIR \
         --optim "paged_adamw_8bit" \
-        --attn_implementation "sdpa" \
+        --attn_implementation "flash_attention_2" \
         --num_train_epochs 1 \
         --per_device_train_batch_size 64 \
         --per_device_eval_batch_size 4 \
@@ -75,7 +74,7 @@ apptainer exec --cleanenv --nv \
         --lr_scheduler_type "cosine" \
         --logging_steps 1 \
         --tf32 True \
-        --model_max_length 2048 \
+        --model_max_length 4096 \
         --gradient_checkpointing True \
         --dataloader_num_workers 4 \
         --lazy_preprocess True \
@@ -87,7 +86,7 @@ echo "➤ DONE"
 # --- Configuration ---
 # Set the path to your fully trained Chem-LLaVA model checkpoint
 # This should be the model that has already been pre-trained/aligned.
-MODEL_PATH="./checkpoints/llava-internlm/Intern-S1-mini-molformer-pretrain"
+MODEL_PATH=$OUTPUT_DIR
 
 # Set the TDC task group you want to fine-tune on
 # e.g., "Tox", "ADMET_group", "Skin_Reaction"

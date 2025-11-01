@@ -21,13 +21,24 @@ from dataclasses import dataclass, field
 import json
 import logging
 import pathlib
-from typing import Dict, Optional, Sequence, List
+from typing import Dict, Optional, Sequence
 
 import torch
 import numpy as np
 from tqdm import tqdm
 import transformers
 import tokenizers
+from packaging import version
+
+from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from torch.utils.data import Dataset
+from llava.train.llava_trainer import LLaVATrainer
+
+from llava import conversation as conversation_lib
+from llava.model import *
+from llava.mm_utils import tokenizer_image_token
+
+from PIL import Image
 
 # Add LLaVA project root to Python path to allow llava imports
 llava_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -47,17 +58,6 @@ import utils.tdc_prompts as tdc_prompts
 import utils.utils as utils
 
 
-from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-from torch.utils.data import Dataset
-from llava.train.llava_trainer import LLaVATrainer
-
-from llava import conversation as conversation_lib
-from llava.model import *
-from llava.mm_utils import tokenizer_image_token
-
-from PIL import Image
-
-
 local_rank = None
 
 
@@ -66,7 +66,6 @@ def rank0_print(*args):
         print(*args)
 
 
-from packaging import version
 IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse('0.14')
 
 
@@ -748,6 +747,9 @@ class LazySupervisedDataset(Dataset):
                 copy.deepcopy([e["conversations"] for e in sources]),
                 self.data_args)
         elif 'smiles' in sources[0]:
+            smiles_text = self.list_data_dict[i]['smiles']
+            mol_processor = self.data_args.mol_processor
+            smiles = mol_processor(smiles_text, padding='max_length', max_length=256, return_tensors="pt")
             sources = preprocess_multimodal(
                 copy.deepcopy([e["conversations"] for e in sources]),
                 self.data_args)
@@ -766,7 +768,7 @@ class LazySupervisedDataset(Dataset):
         if 'image' in self.list_data_dict[i]:
             data_dict['image'] = image
         elif 'smiles' in self.list_data_dict[i]:
-            data_dict['smiles'] = self.list_data_dict[i]['smiles']
+            data_dict['smiles'] = smiles
 
         return data_dict
 
@@ -803,7 +805,13 @@ class DataCollatorForSupervisedDataset(object):
                 batch['images'] = images
         
         if 'smiles' in instances[0]:
-            batch['smiles'] = [instance['smiles'] for instance in instances]
+            smiles_list = [instance['smiles'] for instance in instances]
+            smiles_input_ids = torch.cat([s['input_ids'] for s in smiles_list])
+            smiles_attention_mask = torch.cat([s['attention_mask'] for s in smiles_list])
+            batch['smiles'] = {
+                'input_ids': smiles_input_ids,
+                'attention_mask': smiles_attention_mask
+            }
 
         return batch
 
@@ -998,6 +1006,8 @@ def train(attn_implementation=None):
         vision_tower = model.get_vision_tower()
         vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
 
+        if hasattr(vision_tower, 'mol_processor'):
+            data_args.mol_processor = vision_tower.mol_processor
         if hasattr(vision_tower, 'image_processor'):
             data_args.image_processor = vision_tower.image_processor
         data_args.is_multimodal = True
@@ -1089,9 +1099,12 @@ def train(attn_implementation=None):
                 
                 decoded_output = tokenizer.decode(output[0, -1]).strip()
 
-                if positive_token in decoded_output: score = 1.0
-                elif negative_token in decoded_output: score = 0.0
-                else: score = 0.5
+                if positive_token in decoded_output:
+                    score = 1.0
+                elif negative_token in decoded_output:
+                    score = 0.0
+                else:
+                    score = 0.5
 
                 targets.append(gt_answer)
                 preds.append(score)
@@ -1112,9 +1125,12 @@ def train(attn_implementation=None):
         avg_test_score, std_test_score = tdc_eval.aggregate_scores(test_scores, 'overall')
         
         eval_results = {
-            'per_task_val': val_scores, 'per_task_test': test_scores,
-            'avg_val': avg_val_score, 'std_val': std_val_score,
-            'avg_test': avg_test_score, 'std_test': std_test_score
+            'per_task_val': val_scores, 
+            'per_task_test': test_scores,
+            'avg_val': avg_val_score, 
+            'std_val': std_val_score,
+            'avg_test': avg_test_score, 
+            'std_test': std_test_score
         }
         log.info(f"Average Validation Score: {avg_val_score:.4f} (+/- {std_val_score:.4f})")
         log.info(f"Average Test Score: {avg_test_score:.4f} (+/- {std_test_score:.4f})")
