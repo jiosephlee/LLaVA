@@ -369,6 +369,16 @@ Answer the questions.""",
     sep="<|im_end|>",
 )
 
+conv_intern = Conversation(
+    system="",
+    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
+    version="intern",
+    messages=(),
+    offset=0,
+    sep_style=SeparatorStyle.MPT,
+    sep="<|im_end|>",
+)
+
 default_conversation = conv_vicuna_v1
 conv_templates = {
     "default": conv_vicuna_v0,
@@ -379,6 +389,7 @@ conv_templates = {
     "mistral_instruct": conv_mistral_instruct,
     "chatml_direct": conv_chatml_direct,
     "mistral_direct": conv_chatml_direct,
+    "intern": conv_intern,
 
     "plain": conv_llava_plain,
     "v0_plain": conv_llava_plain,

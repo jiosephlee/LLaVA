@@ -47,7 +47,7 @@ apptainer exec --cleanenv --nv \
     ${YOUR_SIF_FILE} \
     python llava/train/train.py \
         --model_name_or_path $MODEL_NAME \
-        --version v1 \
+        --version intern \
         --data_path $DATA_PATH \
         --vision_tower $MOLECULE_TOWER \
         --mm_projector_type mlp2x_gelu \
