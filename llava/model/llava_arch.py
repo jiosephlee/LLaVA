@@ -184,13 +184,23 @@ class LlavaMetaForCausalLM(ABC):
                 if type(images) is list:
                     images = [x.unsqueeze(0) if x.ndim == 3 else x for x in images]
                 concat_images = torch.cat([image for image in images], dim=0)
+                if getattr(self.config, 'debug_mode', False):
+                    print(f"[prepare_mm] Image batch: num_images={len(images) if type(images) is list else images.shape[0]}, concat_shape={concat_images.shape}")
                 multimodal_features = self.encode_images(concat_images)
+                if getattr(self.config, 'debug_mode', False):
+                    print(f"[prepare_mm] Image embeddings after encode_images: shape={multimodal_features.shape}")
                 split_sizes = [image.shape[0] for image in images]
                 multimodal_features = torch.split(multimodal_features, split_sizes, dim=0)
+                if getattr(self.config, 'debug_mode', False):
+                    print(f"[prepare_mm] Image embeddings after split: num_splits={len(multimodal_features)}, split_sizes={split_sizes}")
                 mm_patch_merge_type = getattr(self.config, 'mm_patch_merge_type', 'flat')
                 image_aspect_ratio = getattr(self.config, 'image_aspect_ratio', 'square')
+                if getattr(self.config, 'debug_mode', False):
+                    print(f"[prepare_mm] Image processing: mm_patch_merge_type={mm_patch_merge_type}, image_aspect_ratio={image_aspect_ratio}")
                 if mm_patch_merge_type == 'flat':
                     multimodal_features = [x.flatten(0, 1) for x in multimodal_features]
+                    if getattr(self.config, 'debug_mode', False):
+                        print(f"[prepare_mm] Image embeddings after flatten: per-sample lengths={[f.shape[0] for f in multimodal_features]}, feature_dim={multimodal_features[0].shape[1] if len(multimodal_features) > 0 else 'N/A'}")
                 elif mm_patch_merge_type.startswith('spatial'):
                     new_multimodal_features = []
                     for image_idx, image_feature in enumerate(multimodal_features):
@@ -230,9 +240,21 @@ class LlavaMetaForCausalLM(ABC):
                     raise ValueError(f"Unexpected mm_patch_merge_type: {self.config.mm_patch_merge_type}")
             else:
                 multimodal_features = self.encode_images(images)
+            if getattr(self.config, 'debug_mode', False):
+                if isinstance(multimodal_features, list):
+                    print(f"[prepare_mm] Image embeddings: batch_size={len(multimodal_features)}, per-sample lengths={[f.shape[0] for f in multimodal_features]}, feature_dim={multimodal_features[0].shape[1] if len(multimodal_features) > 0 else 'N/A'}")
+                else:
+                    print(f"[prepare_mm] Image embeddings: single tensor, length={multimodal_features.shape[0]}, feature_dim={multimodal_features.shape[1] if multimodal_features.ndim > 1 else 'N/A'}")
+                print(f"[prepare_mm] Image processing: {'batch' if isinstance(multimodal_features, list) else 'single'}")
         
         elif smiles is not None:
             multimodal_features = self.encode_smiles(smiles)
+            if getattr(self.config, 'debug_mode', False):
+                if isinstance(multimodal_features, list):
+                    print(f"[prepare_mm] SMILES embeddings: batch_size={len(multimodal_features)}, per-sample lengths={[f.shape[0] for f in multimodal_features]}, feature_dim={multimodal_features[0].shape[1] if len(multimodal_features) > 0 else 'N/A'}")
+                else:
+                    print(f"[prepare_mm] SMILES embeddings: single tensor, length={multimodal_features.shape[0]}, feature_dim={multimodal_features.shape[1] if multimodal_features.ndim > 1 else 'N/A'}")
+                print(f"[prepare_mm] SMILES processing: {'batch' if isinstance(multimodal_features, list) else 'single'}")
 
 
         # TODO: image start / end is not implemented here to support pretraining.
@@ -267,6 +289,8 @@ class LlavaMetaForCausalLM(ABC):
             num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
             if num_images == 0:
                 cur_image_features = multimodal_features[cur_image_idx]
+                if getattr(self.config, 'debug_mode', False):
+                    print(f"[prepare_mm] Sample {batch_idx}: num_images=0, using multimodal features (available length={cur_image_features.shape[0]}) but appending empty slice")
                 cur_input_embeds_1 = self.get_model().embed_tokens(cur_input_ids)
                 cur_input_embeds = torch.cat([cur_input_embeds_1, cur_image_features[0:0]], dim=0)
                 new_input_embeds.append(cur_input_embeds)
@@ -292,6 +316,8 @@ class LlavaMetaForCausalLM(ABC):
                 cur_new_labels.append(cur_labels_noim[i])
                 if i < num_images:
                     cur_image_features = multimodal_features[cur_image_idx]
+                    if getattr(self.config, 'debug_mode', False):
+                        print(f"[prepare_mm] Sample {batch_idx}, embedding {i}: inserting multimodal features with length={cur_image_features.shape[0]}, feature_dim={cur_image_features.shape[1] if cur_image_features.ndim > 1 else 'N/A'}")
                     cur_image_idx += 1
                     cur_new_input_embeds.append(cur_image_features)
                     cur_new_labels.append(torch.full((cur_image_features.shape[0],), IGNORE_INDEX, device=cur_labels.device, dtype=cur_labels.dtype))
