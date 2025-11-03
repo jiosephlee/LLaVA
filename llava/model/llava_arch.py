@@ -256,7 +256,11 @@ class LlavaMetaForCausalLM(ABC):
                     print(f"[prepare_mm] SMILES embeddings: single tensor, length={multimodal_features.shape[0]}, feature_dim={multimodal_features.shape[1] if multimodal_features.ndim > 1 else 'N/A'}")
                 print(f"[prepare_mm] SMILES processing: {'batch' if isinstance(multimodal_features, list) else 'single'}")
 
-
+        if isinstance(input_ids, torch.Tensor) and getattr(self.config, 'debug_mode', False):
+            leaked = (input_ids == IMAGE_TOKEN_INDEX).any().item()
+            if leaked:
+                print("[prepare_mm] IMAGE_TOKEN_INDEX present in original input_ids")
+                
         # TODO: image start / end is not implemented here to support pretraining.
         if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
             raise NotImplementedError
@@ -311,9 +315,18 @@ class LlavaMetaForCausalLM(ABC):
             cur_new_input_embeds = []
             cur_new_labels = []
 
+            # --- START: New debug code ---
+            symbolic_sequence = []
+            if getattr(self.config, 'debug_mode', False):
+                modality_type = "IMAGE" if images is not None else "SMILES"
+            # --- END: New debug code ---
             for i in range(num_images + 1):
                 cur_new_input_embeds.append(cur_input_embeds_no_im[i])
                 cur_new_labels.append(cur_labels_noim[i])
+                # --- START: New debug code ---
+                if getattr(self.config, 'debug_mode', False):
+                    symbolic_sequence.append(f"[TEXT (len={cur_input_embeds_no_im[i].shape[0]})]")
+                # --- END: New debug code ---
                 if i < num_images:
                     cur_image_features = multimodal_features[cur_image_idx]
                     if getattr(self.config, 'debug_mode', False):
@@ -321,7 +334,15 @@ class LlavaMetaForCausalLM(ABC):
                     cur_image_idx += 1
                     cur_new_input_embeds.append(cur_image_features)
                     cur_new_labels.append(torch.full((cur_image_features.shape[0],), IGNORE_INDEX, device=cur_labels.device, dtype=cur_labels.dtype))
-
+                    # --- START: New debug code ---
+                    if getattr(self.config, 'debug_mode', False):
+                        symbolic_sequence.append(f"[{modality_type} (len={cur_image_features.shape[0]})]")
+                    # --- END: New debug code ---
+                    
+            # --- START: New debug code ---
+            if getattr(self.config, 'debug_mode', False):
+                print(f"[prepare_mm] Sample {batch_idx}: Final stitched sequence: {' -> '.join(symbolic_sequence)}")
+            # --- END: New debug code ---
             cur_new_input_embeds = [x.to(self.device) for x in cur_new_input_embeds]
 
             cur_new_input_embeds = torch.cat(cur_new_input_embeds)
@@ -395,11 +416,7 @@ class LlavaMetaForCausalLM(ABC):
             assert (new_labels == IGNORE_INDEX).logical_or(
                 (new_labels >= 0).logical_and(new_labels < vocab)
             ).all(), "labels contain invalid ids"
-        # and no image placeholder should remain
-        if isinstance(_input_ids, torch.Tensor) and getattr(self.config, 'debug_mode', False):
-            leaked = (_input_ids == IMAGE_TOKEN_INDEX).any().item()
-            if leaked:
-                print("[prepare_mm][warn] IMAGE_TOKEN_INDEX present in original input_ids (expected before replacement)")
+
         return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels
 
     def initialize_vision_tokenizer(self, model_args, tokenizer):

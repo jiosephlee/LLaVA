@@ -1366,7 +1366,7 @@ def train(attn_implementation=None):
                 input_ids = tokenizer_image_token(prompt_text, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(model.device)
                 
                 with torch.no_grad():
-                    output = model.generate(input_ids=input_ids, smiles=smiles, max_new_tokens=1, use_cache=True)
+                    output = model.generate(input_ids, smiles=smiles, max_new_tokens=1, use_cache=True)
                 
                 decoded_output = tokenizer.decode(output[0, -1]).strip()
 

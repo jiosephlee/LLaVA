@@ -166,7 +166,7 @@ class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
             )
         else:
             inputs_embeds = self.get_model().embed_tokens(inputs)
-
+        
         return super().generate(
             position_ids=position_ids,
             attention_mask=attention_mask,
