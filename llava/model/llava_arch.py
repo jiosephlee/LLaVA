@@ -334,6 +334,18 @@ class LlavaMetaForCausalLM(ABC):
         if _position_ids is None:
             position_ids = None
 
+        # just before "return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels"
+        assert new_input_embeds.shape[1] == attention_mask.shape[1] == position_ids.shape[1], (
+            f"len mismatch: embeds={new_input_embeds.shape}, mask={attention_mask.shape}, pos={position_ids.shape}"
+        )
+        if new_labels is not None:
+            vocab = getattr(self.config, "vocab_size", None)
+            assert (new_labels == IGNORE_INDEX).logical_or(
+                (new_labels >= 0).logical_and(new_labels < vocab)
+            ).all(), "labels contain invalid ids"
+        # and no image placeholder should remain
+        assert not ((IMAGE_TOKEN_INDEX in _input_ids) if isinstance(_input_ids, torch.Tensor) else False), \
+            "IMAGE_TOKEN_INDEX leaked into final ids"
         return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels
 
     def initialize_vision_tokenizer(self, model_args, tokenizer):

@@ -1337,6 +1337,11 @@ def train(attn_implementation=None):
 
     # Pass tokenizer to training_args for use in debug class
     training_args.tokenizer = tokenizer
+    # Ensure debug class can access training args (for prints)
+    try:
+        model.training_args = training_args
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

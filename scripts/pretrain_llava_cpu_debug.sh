@@ -1,0 +1,58 @@
+#!/bin/bash
+
+set -euo pipefail
+
+echo "➤ CPU DEBUG START"
+
+# Force CPU
+export CUDA_VISIBLE_DEVICES=""
+
+# --- Configuration ---
+# Base language model (Intern-S1)
+MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
+
+# Molecule encoder model (MolFormer)
+MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
+
+# Prepared alignment dataset
+DATA_PATH="playground/data/llava_medex_alignment_10k.json"
+
+# Output directory
+OUTPUT_DIR="checkpoints/debug_cpu_intern_pretrain"
+
+python llava/train/train.py \
+    --model_name_or_path "$MODEL_NAME" \
+    --version intern \
+    --data_path "$DATA_PATH" \
+    --vision_tower "$MOLECULE_TOWER" \
+    --mm_projector_type mlp2x_gelu \
+    --tune_mm_mlp_adapter True \
+    --mm_use_im_start_end False \
+    --mm_use_im_patch_token False \
+    --mm_vision_select_feature "last_hidden_state" \
+    --ensure_image_token_if_missing True \
+    --group_by_modality_length False \
+    --output_dir "$OUTPUT_DIR" \
+    --optim "adamw_torch" \
+    --attn_implementation "sdpa" \
+    --num_train_epochs 1 \
+    --per_device_train_batch_size 1 \
+    --per_device_eval_batch_size 1 \
+    --gradient_accumulation_steps 1 \
+    --eval_strategy "no" \
+    --save_strategy "no" \
+    --learning_rate 1e-3 \
+    --weight_decay 0.0 \
+    --warmup_ratio 0.0 \
+    --lr_scheduler_type "linear" \
+    --model_max_length 1024 \
+    --gradient_checkpointing False \
+    --dataloader_num_workers 0 \
+    --lazy_preprocess True \
+    --report_to none \
+    --debug_mode True \
+    --max_steps 10
+
+echo "➤ CPU DEBUG DONE"
+
+
