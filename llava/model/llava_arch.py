@@ -250,12 +250,52 @@ class LlavaMetaForCausalLM(ABC):
         elif smiles is not None:
             multimodal_features = self.encode_smiles(smiles)
             if getattr(self.config, 'debug_mode', False):
-                if isinstance(multimodal_features, list):
-                    print(f"[prepare_mm] SMILES embeddings: batch_size={len(multimodal_features)}, per-sample lengths={[f.shape[0] for f in multimodal_features]}, feature_dim={multimodal_features[0].shape[1] if len(multimodal_features) > 0 else 'N/A'}")
-                else:
-                    print(f"[prepare_mm] SMILES embeddings: single tensor, length={multimodal_features.shape[0]}, feature_dim={multimodal_features.shape[1] if multimodal_features.ndim > 1 else 'N/A'}")
-                print(f"[prepare_mm] SMILES processing: {'batch' if isinstance(multimodal_features, list) else 'single'}")
+                print(f"[prepare_mm] SMILES embeddings BEFORE unpadding: shape={multimodal_features.shape}")
+                
+            # --- New Unpadding Logic ---
+            unpadded_multimodal_features = []
+            smiles_input_ids = smiles['input_ids']
+            smiles_attention_mask = smiles['attention_mask']
+            
+            # We assume the pad token ID for the SMILES tokenizer is 2.
+            # This is standard for the MolFormer tokenizer ('[PAD]' token).
+            smiles_pad_token_id = 2 
 
+            # Iterate over the batch to unpad each sample
+            for i in range(multimodal_features.shape[0]):
+                sample_embeds = multimodal_features[i]    # (seq_len, hidden_dim)
+                sample_mask = smiles_attention_mask[i]    # (seq_len)
+                sample_input_ids = smiles_input_ids[i]    # (seq_len)
+
+                # Use the boolean mask to select only the non-padded embeddings
+                unpadded_embeds = sample_embeds[sample_mask == 1]
+                unpadded_multimodal_features.append(unpadded_embeds)
+
+                if getattr(self.config, 'debug_mode', False):
+                    # 1. Print SMILES input_ids
+                    print(f"[prepare_mm] Sample {i} SMILES input_ids: {sample_input_ids.tolist()}")
+                    
+                    # 2. Perform assertions
+                    num_non_pad_tokens = (sample_input_ids != smiles_pad_token_id).sum().item()
+                    num_attention_tokens = sample_mask.sum().item()
+                    new_embed_len = unpadded_embeds.shape[0]
+
+                    print(f"[prepare_mm] Sample {i} Validation: non_pad_tokens={num_non_pad_tokens}, attention_mask_sum={num_attention_tokens}, new_embed_len={new_embed_len}")
+
+                    # Assert #1: Non-pad tokens == attention mask sum
+                    assert num_non_pad_tokens == num_attention_tokens, \
+                        f"SMILES Mismatch for sample {i}: non_pad_tokens ({num_non_pad_tokens}) != attention_mask_sum ({num_attention_tokens})"
+                    
+                    # Assert #2: Attention mask sum == new embedding length
+                    assert num_attention_tokens == new_embed_len, \
+                        f"SMILES Mismatch for sample {i}: attention_mask_sum ({num_attention_tokens}) != new_embed_len ({new_embed_len})"
+                    
+                    # 3. Print after-slicing shape
+                    print(f"[prepare_mm] Sample {i} SMILES embeddings AFTER unpadding: shape={unpadded_embeds.shape}")
+
+            # Overwrite multimodal_features with the new *list* of unpadded tensors
+            multimodal_features = unpadded_multimodal_features
+            
         if isinstance(input_ids, torch.Tensor) and getattr(self.config, 'debug_mode', False):
             leaked = (input_ids == IMAGE_TOKEN_INDEX).any().item()
             if leaked:
