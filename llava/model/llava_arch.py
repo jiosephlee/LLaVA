@@ -369,9 +369,9 @@ class LlavaMetaForCausalLM(ABC):
                 # --- END: New debug code ---
                 if i < num_images:
                     cur_image_features = multimodal_features[cur_image_idx]
-                    print(f"[prepare_mm] Sample {batch_idx}, embedding {i}: cur_image_features={cur_image_features.shape}")
-                    print(f"[prepare_mm] Sample {batch_idx}, embedding {i}: cur_image_features={cur_image_features}")
                     if getattr(self.config, 'debug_mode', False):
+                        print(f"[prepare_mm] Sample {batch_idx}, embedding {i}: cur_image_features={cur_image_features.shape}")
+                        print(f"[prepare_mm] Sample {batch_idx}, embedding {i}: cur_image_features={cur_image_features}")
                         print(f"[prepare_mm] Sample {batch_idx}, embedding {i}: inserting multimodal features with length={cur_image_features.shape[0]}, feature_dim={cur_image_features.shape[1] if cur_image_features.ndim > 1 else 'N/A'}")
                     cur_image_idx += 1
                     cur_new_input_embeds.append(cur_image_features)
