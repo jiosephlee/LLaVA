@@ -705,7 +705,7 @@ def preprocess_intern(
         if len(conversations) > 0:
             sample = conversations[0]
             print("\n--- Intern templated conversation sample (truncated) ---")
-            print(sample[:400])
+            print(sample)
             print("--- End sample ---\n")
 
     # Tokenize conversations

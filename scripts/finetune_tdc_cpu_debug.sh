@@ -52,7 +52,7 @@ python llava/train/train.py \
   --lazy_preprocess True \
   --report_to none \
   --debug_mode True \
-  --max_steps 20
+  --max_steps 1
 
 echo "➤ CPU TDC DEBUG DONE"
 

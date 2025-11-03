@@ -5,7 +5,7 @@ set -euo pipefail
 echo "➤ CPU DEBUG START"
 
 # Force CPU
-export CUDA_VISIBLE_DEVICES=""
+# export CUDA_VISIBLE_DEVICES=""
 
 # --- Configuration ---
 # Base language model (Intern-S1)
@@ -52,6 +52,7 @@ python llava/train/train.py \
     --logging_steps 1 \
     --report_to wandb \
     --debug_mode False \
+    --max_steps 100 \
 
 echo "➤ CPU DEBUG DONE"
 
