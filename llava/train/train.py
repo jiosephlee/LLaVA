@@ -660,14 +660,18 @@ def preprocess_intern(
     except Exception:
         data_args = None
     if data_args is not None and getattr(data_args, 'intern_enable_thinking', False):
+        # Provide system content; let Conversation append sep (<|im_end|>)
         conv.system = (
             "<|im_start|>system\n"
             "You are an expert reasoner with extensive experience in all areas. "
             "You approach problems through systematic thinking and rigorous reasoning. "
             "Your response should reflect deep understanding and precise logical thinking, making your solution path "
             "and reasoning clear to others. Please put your thinking process within <think>...</think> tags."
-            "<|im_end|>"
         )
+    else:
+        # Ensure we don't start with a bare <|im_end|>; create an empty system block
+        if not conv.system:
+            conv.system = "<|im_start|>system\n"
 
     # Build conversations via template
     conversations = []
