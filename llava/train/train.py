@@ -690,51 +690,25 @@ def preprocess_intern(
         ).input_ids
 
     targets = input_ids.clone()
-    assert conv.sep_style == conversation_lib.SeparatorStyle.MPT
+    # Simple and robust masking: mask everything before assistant header
+    prefixes = []
+    for text in conversations:
+        split_tok = "<|im_start|>assistant\n"
+        if split_tok in text:
+            prefix = text.split(split_tok)[0] + split_tok
+        else:
+            prefix = text  # no assistant header; mask all
+        prefixes.append(prefix)
 
-    # Mask targets (align with preprocess_mpt)
-    sep = conv.sep + conv.roles[1]
-    for conversation, target in zip(conversations, targets):
-        total_len = int(target.ne(tokenizer.pad_token_id).sum())
+    if has_image:
+        prefix_lens = [len(tokenizer_image_token(p, tokenizer)) for p in prefixes]
+    else:
+        prefix_lens = [len(tokenizer(p).input_ids) for p in prefixes]
 
-        rounds = conversation.split(conv.sep)
-        re_rounds = [conv.sep.join(rounds[:3])]  # system + user + gpt
-        for conv_idx in range(3, len(rounds), 2):
-            re_rounds.append(conv.sep.join(rounds[conv_idx:conv_idx+2]))  # user + gpt
-        cur_len = 0
-        target[:cur_len] = IGNORE_INDEX
-        for i, rou in enumerate(re_rounds):
-            if rou == "":
-                break
-
-            parts = rou.split(sep)
-            if len(parts) != 2:
-                break
-            parts[0] += sep
-
-            if has_image:
-                round_len = len(tokenizer_image_token(rou, tokenizer))
-                instruction_len = len(tokenizer_image_token(parts[0], tokenizer)) - 1
-            else:
-                round_len = len(tokenizer(rou).input_ids)
-                instruction_len = len(tokenizer(parts[0]).input_ids) - 1
-
-            if i != 0 and getattr(tokenizer, 'legacy', False) and IS_TOKENIZER_GREATER_THAN_0_14:
-                round_len += 1
-                instruction_len += 1
-
-            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
-
-            cur_len += round_len
-        target[cur_len:] = IGNORE_INDEX
-
-        if cur_len < tokenizer.model_max_length:
-            if cur_len != total_len:
-                target[:] = IGNORE_INDEX
-                print(
-                    f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
-                    f" (ignored)"
-                )
+    for i, L in enumerate(prefix_lens):
+        total_len = int(targets[i].ne(tokenizer.pad_token_id).sum())
+        L = min(L, total_len)
+        targets[i, :L] = IGNORE_INDEX
 
     return dict(
         input_ids=input_ids,
@@ -1171,6 +1145,8 @@ def train(attn_implementation=None):
             conversation_lib.default_conversation = conversation_lib.conv_templates[model_args.version]
         else:
             conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
+        if training_args.debug_mode:
+            print(f"--- Conversation template: {conversation_lib.default_conversation.version}; sep_style={conversation_lib.default_conversation.sep_style}; sep='{conversation_lib.default_conversation.sep}' ---")
 
     if model_args.vision_tower is not None:
         model.get_model().initialize_vision_modules(
