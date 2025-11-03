@@ -97,6 +97,7 @@ class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
         image_sizes: Optional[List[List[int]]] = None,
         smiles: Optional[dict] = None,
         return_dict: Optional[bool] = None,
+        cache_position=None 
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
         """ This is where the image embeddings are injected into the input_ids. """
