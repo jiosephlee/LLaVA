@@ -912,6 +912,8 @@ class LazySupervisedDataset(Dataset):
             smiles_text = self.list_data_dict[i]['smiles']
             mol_processor = self.data_args.mol_processor
             smiles = mol_processor(smiles_text, padding='max_length', max_length=256, return_tensors="pt")
+            print("smiles={smiles}")
+            print(mol_processor.decode(smiles['input_ids'][0]))
             sources = preprocess_multimodal(
                 copy.deepcopy([e["conversations"] for e in sources]),
                 self.data_args)
