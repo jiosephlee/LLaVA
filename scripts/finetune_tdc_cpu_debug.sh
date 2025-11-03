@@ -51,7 +51,7 @@ python llava/train/train.py \
   --dataloader_num_workers 0 \
   --lazy_preprocess True \
   --report_to none \
-  --debug_mode True \
+  --debug_mode False \
   --ensure_image_token_if_missing True \
   --max_steps 1
 

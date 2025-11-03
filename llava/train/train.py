@@ -1389,10 +1389,19 @@ def train(attn_implementation=None):
         for task in tasks:
             metric = tdc_utils.TASK_METRICS[task]
             val_targets, val_preds = get_predictions(val_dfs[task], task, 'Validation')
-            val_scores[task] = tdc_eval.calculate_metric_score(val_targets, val_preds, metric, log)
+            # Store a dict to be compatible with tdc_evaluation.aggregate_scores and reporting.
+            val_scores[task] = {
+                'overall': tdc_eval.calculate_metric_score(val_targets, val_preds, metric, log),
+                'covered': None,
+                'uncovered': None,
+            }
 
             test_targets, test_preds = get_predictions(test_dfs[task], task, 'Test')
-            test_scores[task] = tdc_eval.calculate_metric_score(test_targets, test_preds, metric, log)
+            test_scores[task] = {
+                'overall': tdc_eval.calculate_metric_score(test_targets, test_preds, metric, log),
+                'covered': None,
+                'uncovered': None,
+            }
 
         log.info("--- Aggregating and Saving TDC Results ---")
         avg_val_score, std_val_score = tdc_eval.aggregate_scores(val_scores, 'overall')
