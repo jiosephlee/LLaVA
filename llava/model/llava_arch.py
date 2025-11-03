@@ -447,7 +447,7 @@ class LlavaMetaForCausalLM(ABC):
         if getattr(self.config, 'debug_mode', False):
             print(f"[prepare_mm] new_input_embeds={new_input_embeds.shape}")
             print(f"[prepare_mm] new_input_embeds={new_input_embeds}")
-            if labels is not None:
+            if new_labels is not None:
                 print(f"[prepare_mm] new_labels={new_labels.shape}")
                 print(f"[prepare_mm] new_labels={new_labels}")
             print(f"[prepare_mm] attention_mask={attention_mask.shape}")
