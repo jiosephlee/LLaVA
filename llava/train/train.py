@@ -1276,20 +1276,47 @@ def train(attn_implementation=None):
             tasks, log, data_dir=os.path.join(project_root, 'data', 'TDC')
         )
 
-        def get_predictions(df, split):
-            log.info(f"--- Getting predictions for {df['task'].iloc[0]} {split} set ---")
+        def get_predictions(df, task, split):
+            log.info(f"--- Getting predictions for {task} {split} set ---")
             targets, preds = [], []
             positive_token, negative_token = "B", "A"
 
             for _, row in tqdm(df.iterrows(), total=len(df), desc=f"Inference on {split} set"):
-                prompt = tdc_prompts.row_to_text(row, split=split, dataset=row['task'], prompt_style="txgemma_v3", is_intern=True)
-                smiles = row['Drug']
+                # Use row_to_conversations_mcq like in training
+                conversations = tdc_prompts.row_to_conversations_mcq(
+                    row=row,
+                    dataset=task,
+                    split=split.lower(),
+                    prompt_style="txgemma_v3",
+                    is_intern=True,
+                )
+                
+                # Ensure image token is present in first human message (like in preprocess_multimodal)
+                if conversations and conversations[0].get('from', '').lower() == 'human':
+                    if DEFAULT_IMAGE_TOKEN not in conversations[0]['value']:
+                        conversations[0]['value'] = DEFAULT_IMAGE_TOKEN + '\n' + conversations[0]['value']
+                
+                # Format conversations using Intern template (similar to preprocess_intern)
+                conv = conversation_lib.default_conversation.copy()
+                conv.messages = []
+                for sentence in conversations:
+                    role = conv.roles[0] if sentence["from"].lower() == "human" else conv.roles[1]
+                    conv.append_message(role, sentence["value"])
+                
+                # Get the prompt string
+                prompt_text = conv.get_prompt()
+                
+                smiles_text = row['Drug']
                 gt_answer = row['Y']
                 
-                input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(model.device)
+                # Process SMILES using mol_processor (same as in training)
+                mol_processor = data_args.mol_processor
+                smiles = mol_processor(smiles_text, padding='max_length', max_length=256, return_tensors="pt")
+                
+                input_ids = tokenizer_image_token(prompt_text, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(model.device)
                 
                 with torch.no_grad():
-                    output = model.generate(input_ids=input_ids, smiles=[smiles], max_new_tokens=1, use_cache=True)
+                    output = model.generate(input_ids=input_ids, smiles=smiles, max_new_tokens=1, use_cache=True)
                 
                 decoded_output = tokenizer.decode(output[0, -1]).strip()
 
@@ -1308,10 +1335,10 @@ def train(attn_implementation=None):
         val_scores, test_scores = {}, {}
         for task in tasks:
             metric = tdc_utils.TASK_METRICS[task]
-            val_targets, val_preds = get_predictions(val_dfs[task], 'Validation')
+            val_targets, val_preds = get_predictions(val_dfs[task], task, 'Validation')
             val_scores[task] = tdc_eval.calculate_metric_score(val_targets, val_preds, metric, log)
 
-            test_targets, test_preds = get_predictions(test_dfs[task], 'Test')
+            test_targets, test_preds = get_predictions(test_dfs[task], task, 'Test')
             test_scores[task] = tdc_eval.calculate_metric_score(test_targets, test_preds, metric, log)
 
         log.info("--- Aggregating and Saving TDC Results ---")
