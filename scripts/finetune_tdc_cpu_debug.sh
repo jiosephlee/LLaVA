@@ -8,7 +8,8 @@ echo "➤ CPU TDC DEBUG START"
 # --- Configuration ---
 # Path to a pre-trained (aligned) Chem-LLaVA checkpoint to start from
 # Edit this to your actual path, or pass as first arg to this script.
-MODEL_PATH="checkpoints/debug_cpu_intern_pretrain"
+MODEL_PATH="Qwen/Qwen2.5-1.5B"
+PROJECTOR_PATH="checkpoints/debug_cpu_intern_pretrain"
 
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
 TDC_TASK_GROUP="${2:-Tox}"
@@ -17,8 +18,8 @@ OUTPUT_DIR="checkpoints/debug_cpu_tdc_${TDC_TASK_GROUP}"
 
 # Use projector weights if available
 PRETRAIN_ARG=""
-if [ -f "${MODEL_PATH}/mm_projector.bin" ]; then
-  PRETRAIN_ARG="--pretrain_mm_mlp_adapter ${MODEL_PATH}/mm_projector.bin"
+if [ -f "${PROJECTOR_PATH}/mm_projector.bin" ]; then
+  PRETRAIN_ARG="--pretrain_mm_mlp_adapter ${PROJECTOR_PATH}/mm_projector.bin"
 fi
 
 python llava/train/train.py \
