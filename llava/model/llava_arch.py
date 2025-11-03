@@ -444,14 +444,13 @@ class LlavaMetaForCausalLM(ABC):
         if _position_ids is None:
             position_ids = None
             
-        print(f"[prepare_mm] new_input_embeds={new_input_embeds.shape}")
-        print(f"[prepare_mm] new_input_embeds={new_input_embeds}")
-        print(f"[prepare_mm] new_labels={new_labels.shape}")
-        print(f"[prepare_mm] new_labels={new_labels}")
-        print(f"[prepare_mm] attention_mask={attention_mask.shape}")
-        print(f"[prepare_mm] attention_mask={attention_mask}")
-        print(f"[prepare_mm] position_ids={position_ids.shape}")
-        print(f"[prepare_mm] position_ids={position_ids}")
+        if getattr(self.config, 'debug_mode', False):
+            print(f"[prepare_mm] new_input_embeds={new_input_embeds.shape}")
+            print(f"[prepare_mm] new_input_embeds={new_input_embeds}")
+            print(f"[prepare_mm] new_labels={new_labels.shape}")
+            print(f"[prepare_mm] new_labels={new_labels}")
+            print(f"[prepare_mm] attention_mask={attention_mask.shape}")
+            print(f"[prepare_mm] attention_mask={attention_mask}")
 
         # just before "return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels"
         if attention_mask is not None:
