@@ -52,7 +52,7 @@ python llava/train/train.py \
     --logging_steps 1 \
     --report_to wandb \
     --debug_mode False \
-    --max_steps 100 \
+    --max_steps 1000 \
 
 echo "➤ CPU DEBUG DONE"
 

@@ -1432,7 +1432,11 @@ def train(attn_implementation=None):
             "data_args": data_args.__dict__,
             "training_args": training_args.to_dict()
         }
-        tdc_eval.save_all_results(results_dir, model_args.model_name_or_path, data_args.task_group_name, tasks, eval_results, hyperparameters, log)
+        # Use LLAVA-specific saver that handles tokenizer/processor objects
+        if hasattr(tdc_eval, 'save_all_results_llava'):
+            tdc_eval.save_all_results_llava(results_dir, model_args.model_name_or_path, data_args.task_group_name, tasks, eval_results, hyperparameters, log)
+        else:
+            tdc_eval.save_all_results(results_dir, model_args.model_name_or_path, data_args.task_group_name, tasks, eval_results, hyperparameters, log)
 
 
     if training_args.lora_enable:

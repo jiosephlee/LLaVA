@@ -53,7 +53,7 @@ python llava/train/train.py \
   --report_to none \
   --debug_mode False \
   --ensure_image_token_if_missing True \
-  --max_steps 1
+  --max_steps 100
 
 echo "➤ CPU TDC DEBUG DONE"
 
