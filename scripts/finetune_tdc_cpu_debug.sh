@@ -37,7 +37,7 @@ python llava/train/train.py \
   --optim "paged_adamw_8bit" \
   --attn_implementation "sdpa" \
   --num_train_epochs 1 \
-  --per_device_train_batch_size 1 \
+  --per_device_train_batch_size 2 \
   --per_device_eval_batch_size 1 \
   --gradient_accumulation_steps 1 \
   --eval_strategy "no" \
@@ -52,6 +52,7 @@ python llava/train/train.py \
   --lazy_preprocess True \
   --report_to none \
   --debug_mode True \
+  --ensure_image_token_if_missing True \
   --max_steps 1
 
 echo "➤ CPU TDC DEBUG DONE"
