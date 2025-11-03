@@ -340,28 +340,65 @@ def preprocess_multimodal(
     data_args: DataArguments
 ) -> Dict:
     is_multimodal = data_args.is_multimodal
+    if DEBUG_MODE:
+        print(f"[preprocess_multimodal] is_multimodal={is_multimodal}, num_sources={len(sources)}")
     if not is_multimodal:
+        if DEBUG_MODE:
+            print("[preprocess_multimodal] Early return: not multimodal")
         return sources
 
-    for source in sources:
+    ensure_token = getattr(data_args, 'ensure_image_token_if_missing', False)
+    if DEBUG_MODE:
+        print(f"[preprocess_multimodal] ensure_image_token_if_missing={ensure_token}, mm_use_im_start_end={data_args.mm_use_im_start_end}")
+    
+    for source_idx, source in enumerate(sources):
+        if DEBUG_MODE:
+            print(f"[preprocess_multimodal] Processing source {source_idx}, num_sentences={len(source)}")
+        
         # Ensure the first human turn contains the image token when requested
-        if getattr(data_args, 'ensure_image_token_if_missing', False):
-            for sentence in source:
+        if ensure_token:
+            if DEBUG_MODE:
+                print(f"[preprocess_multimodal] Source {source_idx}: Checking ensure_image_token_if_missing branch")
+            for sent_idx, sentence in enumerate(source):
                 if sentence.get('from', '').lower() == 'human':
-                    if DEFAULT_IMAGE_TOKEN not in sentence['value']:
+                    had_token = DEFAULT_IMAGE_TOKEN in sentence['value']
+                    if DEBUG_MODE:
+                        print(f"[preprocess_multimodal] Source {source_idx}, sentence {sent_idx} (human): has_token={had_token}, value_preview='{sentence['value'][:50]}...'")
+                    if not had_token:
                         sentence['value'] = (DEFAULT_IMAGE_TOKEN + '\n' + sentence['value']).strip()
+                        if DEBUG_MODE:
+                            print(f"[preprocess_multimodal] Source {source_idx}, sentence {sent_idx}: INSERTED image token, new_value_preview='{sentence['value'][:50]}...'")
                     break
-        for sentence in source:
+        
+        for sent_idx, sentence in enumerate(source):
             if DEFAULT_IMAGE_TOKEN in sentence['value']:
+                if DEBUG_MODE:
+                    print(f"[preprocess_multimodal] Source {source_idx}, sentence {sent_idx}: Found image token, processing...")
                 sentence['value'] = sentence['value'].replace(DEFAULT_IMAGE_TOKEN, '').strip()
                 sentence['value'] = DEFAULT_IMAGE_TOKEN + '\n' + sentence['value']
                 sentence['value'] = sentence['value'].strip()
                 if "mmtag" in conversation_lib.default_conversation.version:
                     sentence['value'] = sentence['value'].replace(DEFAULT_IMAGE_TOKEN, '<Image>' + DEFAULT_IMAGE_TOKEN + '</Image>')
+                    if DEBUG_MODE:
+                        print(f"[preprocess_multimodal] Source {source_idx}, sentence {sent_idx}: Applied mmtag wrapper")
             replace_token = DEFAULT_IMAGE_TOKEN
             if data_args.mm_use_im_start_end:
                 replace_token = DEFAULT_IM_START_TOKEN + replace_token + DEFAULT_IM_END_TOKEN
+                if DEBUG_MODE:
+                    print(f"[preprocess_multimodal] Source {source_idx}, sentence {sent_idx}: Using im_start_end tokens")
             sentence["value"] = sentence["value"].replace(DEFAULT_IMAGE_TOKEN, replace_token)
+            
+            if DEBUG_MODE and DEFAULT_IMAGE_TOKEN in sentence['value']:
+                print(f"[preprocess_multimodal] WARNING: Source {source_idx}, sentence {sent_idx}: DEFAULT_IMAGE_TOKEN still present after replace!")
+            
+        if DEBUG_MODE:
+            # Check final state
+            final_has_token = any(DEFAULT_IMAGE_TOKEN in sent.get('value', '') or DEFAULT_IM_START_TOKEN in sent.get('value', '') for sent in source)
+            print(f"[preprocess_multimodal] Source {source_idx} final state: has_image_token={final_has_token}")
+            if final_has_token:
+                for sent_idx, sent in enumerate(source):
+                    if DEFAULT_IMAGE_TOKEN in sent.get('value', '') or DEFAULT_IM_START_TOKEN in sent.get('value', ''):
+                        print(f"[preprocess_multimodal] Source {source_idx}, sentence {sent_idx} final value preview: '{sent.get('value', '')[:80]}...'")
 
     return sources
 
