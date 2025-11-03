@@ -1210,6 +1210,14 @@ def train(attn_implementation=None):
             padding_side="right",
             trust_remote_code=True
         )
+    elif 'intern' in model_args.model_name_or_path or 'Qwen' in model_args.model_name_or_path:
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            model_args.model_name_or_path,
+            cache_dir=training_args.cache_dir,
+            model_max_length=training_args.model_max_length,
+            padding_side="left",
+            trust_remote_code=True
+        )
     else:
         tokenizer = transformers.AutoTokenizer.from_pretrained(
             model_args.model_name_or_path,
