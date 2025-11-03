@@ -659,7 +659,8 @@ def preprocess_intern(
         data_args = frame.f_locals.get('data_args', None) or frame.f_globals.get('data_args', None)
     except Exception:
         data_args = None
-    if data_args is not None and getattr(data_args, 'intern_enable_thinking', False):
+    thinking = bool(data_args is not None and getattr(data_args, 'intern_enable_thinking', False))
+    if thinking:
         # Provide system content; let Conversation append sep (<|im_end|>)
         conv.system = (
             "<|im_start|>system\n"
@@ -667,23 +668,37 @@ def preprocess_intern(
             "You approach problems through systematic thinking and rigorous reasoning. "
             "Your response should reflect deep understanding and precise logical thinking, making your solution path "
             "and reasoning clear to others. Please put your thinking process within <think>...</think> tags."
+            "<|im_end|>"
         )
     else:
-        # Ensure we don't start with a bare <|im_end|>; create an empty system block
-        if not conv.system:
-            conv.system = "<|im_start|>system\n"
+        conv.system = ""  # no system block when thinking is off
 
-    # Build conversations via template
     conversations = []
-    for i, source in enumerate(sources):
-        if roles[source[0]["from"]] != conv.roles[0]:
-            source = source[1:]
-        conv.messages = []
-        for j, sentence in enumerate(source):
-            role = roles[sentence["from"]]
-            assert role == conv.roles[j % 2], f"{i}"
-            conv.append_message(role, sentence["value"])
-        conversations.append(conv.get_prompt())
+    if thinking:
+        # Use Conversation template path (system + user + assistant), MPT style
+        for i, source in enumerate(sources):
+            if roles[source[0]["from"]] != conv.roles[0]:
+                source = source[1:]
+            conv.messages = []
+            for j, sentence in enumerate(source):
+                role = roles[sentence["from"]]
+                assert role == conv.roles[j % 2], f"{i}"
+                conv.append_message(role, sentence["value"])
+            conversations.append(conv.get_prompt())
+    else:
+        # Manually build: user/assistant only, no system
+        for source in sources:
+            user_msg, assistant_msg = "", ""
+            for sentence in source:
+                if sentence.get('from', '').lower() == 'human':
+                    user_msg = sentence['value']
+                elif sentence.get('from', '').lower() == 'gpt':
+                    assistant_msg = sentence['value']
+            text = (
+                "<|im_start|>user\n" + user_msg + "<|im_end|>\n"
+                "<|im_start|>assistant\n" + assistant_msg + "<|im_end|>"
+            )
+            conversations.append(text)
 
     # Debug: show a sample of the templated conversation (with |im| tags)
     if DEBUG_MODE:
