@@ -753,7 +753,7 @@ def preprocess(
     tokenizer: transformers.PreTrainedTokenizer,
     has_image: bool = False
 ) -> Dict:
-    print(f"{conversation_lib.default_conversation.version} conversation version")
+    # print(f"{conversation_lib.default_conversation.version} conversation version")
     if conversation_lib.default_conversation.version == "intern":
         return preprocess_intern(sources, tokenizer, has_image=has_image)
     """
@@ -881,7 +881,7 @@ class LazySupervisedDataset(Dataset):
         else:
             sources = copy.deepcopy([e["conversations"] for e in sources])
             
-        print("Preprocessing data...")
+        # print("Preprocessing data...")
         data_dict = preprocess(
             sources,
             self.tokenizer,

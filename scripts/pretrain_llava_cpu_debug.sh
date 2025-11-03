@@ -49,8 +49,9 @@ python llava/train/train.py \
     --gradient_checkpointing False \
     --dataloader_num_workers 0 \
     --lazy_preprocess True \
-    --report_to none \
-    --debug_mode True \
+    --logging_steps 1 \
+    --report_to wandb \
+    --debug_mode False \
 
 echo "➤ CPU DEBUG DONE"
 
