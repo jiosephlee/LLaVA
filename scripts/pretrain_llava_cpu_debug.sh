@@ -9,7 +9,7 @@ export CUDA_VISIBLE_DEVICES=""
 
 # --- Configuration ---
 # Base language model (Intern-S1)
-MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
+MODEL_NAME="Qwen/Qwen2.5-1.5B"
 
 # Molecule encoder model (MolFormer)
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
@@ -33,7 +33,7 @@ python llava/train/train.py \
     --ensure_image_token_if_missing True \
     --group_by_modality_length False \
     --output_dir "$OUTPUT_DIR" \
-    --optim "adamw_torch" \
+    --optim "paged_adamw_8bit" \
     --attn_implementation "sdpa" \
     --num_train_epochs 1 \
     --per_device_train_batch_size 1 \
@@ -51,7 +51,6 @@ python llava/train/train.py \
     --lazy_preprocess True \
     --report_to none \
     --debug_mode True \
-    --max_steps 10
 
 echo "➤ CPU DEBUG DONE"
 

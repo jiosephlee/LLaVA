@@ -1233,7 +1233,7 @@ def train(attn_implementation=None):
                     **data_module)
 
     # Start VRAM monitoring
-    torch.cuda.reset_peak_memory_stats()
+    # torch.cuda.reset_peak_memory_stats()
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
