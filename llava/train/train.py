@@ -996,9 +996,10 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
     """Make dataset and collator for supervised fine-tuning."""
     if data_args.task_group_name is not None:
         print(f"--- Loading and preparing TDC data for task group: {data_args.task_group_name} ---")
-        tasks = tdc_data_utils.get_task_list(data_args.task_group_name)
+        log = utils.setup_logging()
+        tasks = tdc_data_utils.get_task_list(data_args.task_group_name, log)
         combined_train_df, val_dfs, test_dfs = tdc_data_utils.load_multitask_data(
-            tasks, data_dir=os.path.join(project_root, 'data', 'TDC')
+            tasks, log, data_dir=os.path.join(project_root, 'data', 'TDC')
         )
         
         def format_df_to_list_data_dict(df, split):
