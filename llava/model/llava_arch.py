@@ -159,6 +159,19 @@ class LlavaMetaForCausalLM(ABC):
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
         images, image_sizes=None, smiles=None
     ):
+        if getattr(self.config, 'debug_mode', False):
+            try:
+                bsz = input_ids.shape[0] if isinstance(input_ids, torch.Tensor) else len(input_ids)
+            except Exception:
+                bsz = None
+            print("[prepare_mm] has_images=", images is not None, "has_smiles=", smiles is not None,
+                  "batch=", bsz)
+            if isinstance(input_ids, torch.Tensor):
+                try:
+                    num_im_tokens = (input_ids == IMAGE_TOKEN_INDEX).sum(dim=1)
+                    print("[prepare_mm] IMAGE_TOKEN_INDEX per sample:", num_im_tokens[:8].tolist())
+                except Exception:
+                    pass
         vision_tower = self.get_vision_tower()
         if vision_tower is None or (images is None and smiles is None) or input_ids.shape[1] == 1:
             return input_ids, position_ids, attention_mask, past_key_values, None, labels
@@ -357,8 +370,10 @@ class LlavaMetaForCausalLM(ABC):
                 (new_labels >= 0).logical_and(new_labels < vocab)
             ).all(), "labels contain invalid ids"
         # and no image placeholder should remain
-        if isinstance(_input_ids, torch.Tensor):
-            assert not (_input_ids == IMAGE_TOKEN_INDEX).any().item(), "IMAGE_TOKEN_INDEX leaked into final ids"
+        if isinstance(_input_ids, torch.Tensor) and getattr(self.config, 'debug_mode', False):
+            leaked = (_input_ids == IMAGE_TOKEN_INDEX).any().item()
+            if leaked:
+                print("[prepare_mm][warn] IMAGE_TOKEN_INDEX present in original input_ids (expected before replacement)")
         return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels
 
     def initialize_vision_tokenizer(self, model_args, tokenizer):

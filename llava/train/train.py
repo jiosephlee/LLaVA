@@ -70,6 +70,9 @@ def rank0_print(*args):
 
 IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse('0.14')
 
+# Module-level debug flag (avoids sys._getframe in helpers)
+DEBUG_MODE = False
+
 
 @dataclass
 class ModelArguments:
@@ -648,7 +651,8 @@ def preprocess_intern(
 ) -> Dict:
     conv = conversation_lib.default_conversation.copy()
     roles = {"human": conv.roles[0], "gpt": conv.roles[1]}
-    print("Preprocessing intern data...")
+    if DEBUG_MODE:
+        print("Preprocessing intern data...")
     # Optionally set system prompt for thinking
     try:
         frame = sys._getframe(1)
@@ -678,12 +682,7 @@ def preprocess_intern(
         conversations.append(conv.get_prompt())
 
     # Debug: show a sample of the templated conversation (with |im| tags)
-    try:
-        frame_dbg = sys._getframe(1)
-        training_args = frame_dbg.f_locals.get('training_args', None) or frame_dbg.f_globals.get('training_args', None)
-    except Exception:
-        training_args = None
-    if training_args is not None and getattr(training_args, 'debug_mode', False):
+    if DEBUG_MODE:
         if len(conversations) > 0:
             sample = conversations[0]
             print("\n--- Intern templated conversation sample (truncated) ---")
@@ -1023,6 +1022,9 @@ def train(attn_implementation=None):
         (ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     local_rank = training_args.local_rank
+    # Propagate debug flag to module-level and model config
+    global DEBUG_MODE
+    DEBUG_MODE = bool(training_args.debug_mode)
     compute_dtype = (torch.float16 if training_args.fp16 else (torch.bfloat16 if training_args.bf16 else torch.float32))
 
     bnb_model_from_pretrained_args = {}
@@ -1185,6 +1187,7 @@ def train(attn_implementation=None):
         model.config.image_aspect_ratio = data_args.image_aspect_ratio
         model.config.tokenizer_padding_side = tokenizer.padding_side
         model.config.tokenizer_model_max_length = tokenizer.model_max_length
+        model.config.debug_mode = bool(training_args.debug_mode)
 
         model.config.tune_mm_mlp_adapter = training_args.tune_mm_mlp_adapter = model_args.tune_mm_mlp_adapter
         if model_args.tune_mm_mlp_adapter:
