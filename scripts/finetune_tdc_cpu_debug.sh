@@ -6,10 +6,12 @@ echo "➤ CPU TDC DEBUG START"
 
 
 # --- Configuration ---
-# Path to a pre-trained (aligned) Chem-LLaVA checkpoint to start from
-# Edit this to your actual path, or pass as first arg to this script.
-MODEL_PATH="Qwen/Qwen2.5-1.5B"
-PROJECTOR_PATH="checkpoints/debug_cpu_intern_pretrain"
+# Base language model (Intern)
+MODEL_NAME="Qwen/Qwen2.5-1.5B"
+# Projector weights from the pretrain step
+PROJECTOR_BIN="checkpoints/debug_cpu_intern_pretrain/mm_projector.bin"
+# Molecule encoder model (MolFormer)
+MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
 TDC_TASK_GROUP="${2:-Tox}"
@@ -18,18 +20,19 @@ OUTPUT_DIR="checkpoints/debug_cpu_tdc_${TDC_TASK_GROUP}"
 
 # Use projector weights if available
 PRETRAIN_ARG=""
-if [ -f "${PROJECTOR_PATH}/mm_projector.bin" ]; then
-  PRETRAIN_ARG="--pretrain_mm_mlp_adapter ${PROJECTOR_PATH}/mm_projector.bin"
+if [ -f "${PROJECTOR_BIN}" ]; then
+  PRETRAIN_ARG="--pretrain_mm_mlp_adapter ${PROJECTOR_BIN}"
 fi
 
 python llava/train/train.py \
-  --model_name_or_path "${MODEL_PATH}" \
+  --model_name_or_path "${MODEL_NAME}" \
   ${PRETRAIN_ARG} \
+  --vision_tower "${MOLECULE_TOWER}" \
   --version intern \
   --task_group_name "${TDC_TASK_GROUP}" \
   --mm_projector_type mlp2x_gelu \
   --freeze_backbone False \
-  --tune_mm_mlp_adapter True \
+  --tune_mm_mlp_adapter False \
   --output_dir "${OUTPUT_DIR}" \
   --optim "paged_adamw_8bit" \
   --attn_implementation "sdpa" \
