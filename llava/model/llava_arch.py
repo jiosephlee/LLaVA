@@ -139,11 +139,19 @@ class LlavaMetaForCausalLM(ABC):
 
     def encode_images(self, images):
         image_features = self.get_model().get_vision_tower()(images)
+        # Align dtype to projector/LM dtype for safe mixed-precision
+        proj_dtype = next(self.get_model().mm_projector.parameters()).dtype
+        if image_features.dtype != proj_dtype:
+            image_features = image_features.to(proj_dtype)
         image_features = self.get_model().mm_projector(image_features)
         return image_features
 
     def encode_smiles(self, smiles):
         smiles_features = self.get_model().get_vision_tower()(smiles)
+        # Align dtype to projector/LM dtype for safe mixed-precision
+        proj_dtype = next(self.get_model().mm_projector.parameters()).dtype
+        if smiles_features.dtype != proj_dtype:
+            smiles_features = smiles_features.to(proj_dtype)
         smiles_features = self.get_model().mm_projector(smiles_features)
         return smiles_features
 

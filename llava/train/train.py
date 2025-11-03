@@ -677,6 +677,19 @@ def preprocess_intern(
             conv.append_message(role, sentence["value"])
         conversations.append(conv.get_prompt())
 
+    # Debug: show a sample of the templated conversation (with |im| tags)
+    try:
+        frame_dbg = sys._getframe(1)
+        training_args = frame_dbg.f_locals.get('training_args', None) or frame_dbg.f_globals.get('training_args', None)
+    except Exception:
+        training_args = None
+    if training_args is not None and getattr(training_args, 'debug_mode', False):
+        if len(conversations) > 0:
+            sample = conversations[0]
+            print("\n--- Intern templated conversation sample (truncated) ---")
+            print(sample[:400])
+            print("--- End sample ---\n")
+
     # Tokenize conversations
     if has_image:
         input_ids = torch.stack([tokenizer_image_token(prompt, tokenizer, return_tensors='pt') for prompt in conversations], dim=0)
@@ -1155,7 +1168,11 @@ def train(attn_implementation=None):
         )
         
         vision_tower = model.get_vision_tower()
-        vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
+        # Keep MolFormer (SMILES encoder) in float32; only move device.
+        if hasattr(vision_tower, 'mol_processor'):
+            vision_tower.to(device=training_args.device)
+        else:
+            vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
 
         if hasattr(vision_tower, 'mol_processor'):
             data_args.mol_processor = vision_tower.mol_processor
