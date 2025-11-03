@@ -917,7 +917,14 @@ class LazySupervisedDataset(Dataset):
             unmasked_labels = data_dict.get("labels")[data_dict.get("labels") != IGNORE_INDEX]
             print("Unmasked Labels:", unmasked_labels)
             if len(unmasked_labels) > 0:
-                print("Decoded Unmasked Labels:", self.tokenizer.decode(unmasked_labels[unmasked_labels >= 0]))
+                # Show decoded as separate tokens
+                decoded_tokens = []
+                for label_id in unmasked_labels:
+                    if label_id >= 0:
+                        decoded_token = self.tokenizer.decode([int(label_id)])
+                        decoded_tokens.append(f"{int(label_id)}:'{decoded_token}'")
+                print("Decoded Unmasked Labels (token by token):", " | ".join(decoded_tokens))
+                print("Decoded Unmasked Labels (full string):", self.tokenizer.decode(unmasked_labels[unmasked_labels >= 0]))
             print("--- End Debugging ---")
 
         return data_dict
@@ -983,7 +990,14 @@ class DataCollatorForSupervisedDataset(object):
             unmasked_labels = batch['labels'][batch['labels'] != IGNORE_INDEX]
             print("Unmasked labels in batch:", unmasked_labels)
             if len(unmasked_labels) > 0:
-                print("Decoded unmasked labels:", self.tokenizer.decode(unmasked_labels[unmasked_labels >= 0]))
+                # Show decoded as separate tokens
+                decoded_tokens = []
+                for label_id in unmasked_labels:
+                    if label_id >= 0:
+                        decoded_token = self.tokenizer.decode([int(label_id)])
+                        decoded_tokens.append(f"{int(label_id)}:'{decoded_token}'")
+                print("Decoded unmasked labels (token by token):", " | ".join(decoded_tokens))
+                print("Decoded unmasked labels (full string):", self.tokenizer.decode(unmasked_labels[unmasked_labels >= 0]))
             else:
                 print("No unmasked labels in this batch.")
             print("--- End Debugging ---\n")
@@ -1291,10 +1305,9 @@ def train(attn_implementation=None):
                     is_intern=True,
                 )
                 
-                # Ensure image token is present in first human message (like in preprocess_multimodal)
-                if conversations and conversations[0].get('from', '').lower() == 'human':
-                    if DEFAULT_IMAGE_TOKEN not in conversations[0]['value']:
-                        conversations[0]['value'] = DEFAULT_IMAGE_TOKEN + '\n' + conversations[0]['value']
+                # Use preprocess_multimodal to ensure image token is inserted correctly
+                conversations = preprocess_multimodal([conversations], data_args)
+                conversations = conversations[0]  # Unwrap from list
                 
                 # Format conversations using Intern template (similar to preprocess_intern)
                 conv = conversation_lib.default_conversation.copy()
