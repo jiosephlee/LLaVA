@@ -107,7 +107,6 @@ apptainer exec --cleanenv --nv \
     --mm_projector_type mlp2x_gelu \
     --mm_vision_select_layer -2 \
     --image_aspect_ratio pad \
-    --group_by_modality_length True \
     --bf16 True \
     --optim "paged_adamw_8bit" \
     --attn_implementation "sdpa" \
