@@ -55,6 +55,21 @@ python llava/train/train.py \
   --ensure_image_token_if_missing True \
   --max_steps 100
 
-echo "➤ CPU TDC DEBUG DONE"
+echo "➤ TDC TRAINING DONE"
+
+# --- Evaluation ---
+echo "➤ STARTING TDC EVALUATION"
+
+python llava/train/eval_tdc.py \
+  --model-path "${OUTPUT_DIR}" \
+  --task-group-name "${TDC_TASK_GROUP}" \
+  --output-dir "${OUTPUT_DIR}" \
+  --conv-mode "intern" \
+  --split "test"
+
+echo "➤ TDC EVALUATION DONE"
+
+
+echo "➤ CPU TDC DEBUG (TRAIN + EVAL) DONE"
 
 
