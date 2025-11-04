@@ -3,13 +3,13 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=6:00:00
+#SBATCH --time=2:00:00
 #SBATCH --gres=gpu:a40:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=96GB
-#SBATCH --job-name=llava_2
-#SBATCH --output=logs/llava_2.out
-#SBATCH --error=logs/llava_2.err
+#SBATCH --job-name=llava
+#SBATCH --output=logs/llava.out
+#SBATCH --error=logs/llava.err
 
 # --- Robust Path Setup ---
 # Use the SLURM_SUBMIT_DIR variable to get the directory where the sbatch command was run.
@@ -34,51 +34,13 @@ MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
 # Prepared alignment dataset
-DATA_PATH="playground/data/llava_medex_alignment_100k.json"
+DATA_PATH="playground/data/llava_medex_alignment_10k.json"
 
 # Output directory
-OUTPUT_DIR="checkpoints/pretrain_100k"
-
-apptainer exec --cleanenv --nv \
-    --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
-    ${YOUR_SIF_FILE} \
-    python llava/train/train.py \
-    --model_name_or_path "$MODEL_NAME" \
-    --version intern \
-    --data_path "$DATA_PATH" \
-    --vision_tower "$MOLECULE_TOWER" \
-    --mm_projector_type mlp2x_gelu \
-    --tune_mm_mlp_adapter True \
-    --mm_use_im_start_end False \
-    --mm_use_im_patch_token False \
-    --mm_vision_select_feature "last_hidden_state" \
-    --ensure_image_token_if_missing True \
-    --group_by_modality_length False \
-    --output_dir "$OUTPUT_DIR" \
-    --optim "paged_adamw_8bit" \
-    --attn_implementation "sdpa" \
-    --num_train_epochs 1 \
-    --per_device_train_batch_size 2 \
-    --per_device_eval_batch_size 1 \
-    --gradient_accumulation_steps 8 \
-    --eval_strategy "no" \
-    --save_strategy "no" \
-    --learning_rate 1e-3 \
-    --weight_decay 0.0 \
-    --warmup_ratio 0.1 \
-    --lr_scheduler_type "cosine" \
-    --model_max_length 1024 \
-    --gradient_checkpointing False \
-    --dataloader_num_workers 4 \
-    --lazy_preprocess True \
-    --logging_steps 1 \
-    --report_to wandb \
-    --debug_mode False \
-
-echo "➤ CPU DEBUG DONE"
+OUTPUT_DIR="checkpoints/pretrain_10k"
 
 # Projector weights from the pretrain step
-PROJECTOR_BIN="checkpoints/pretrain_100k/mm_projector_100k.bin"
+PROJECTOR_BIN="checkpoints/pretrain_10k/mm_projector_10k.bin"
 # Molecule encoder model (MolFormer)
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
