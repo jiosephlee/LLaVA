@@ -39,7 +39,10 @@ DATA_PATH="playground/data/llava_medex_alignment_10k.json"
 # Output directory
 OUTPUT_DIR="checkpoints/pretrain_10k"
 
-python llava/train/train.py \
+apptainer exec --cleanenv --nv \
+    --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
+    ${YOUR_SIF_FILE} \
+    python llava/train/train.py \
     --model_name_or_path "$MODEL_NAME" \
     --version intern \
     --data_path "$DATA_PATH" \
@@ -90,7 +93,10 @@ if [ -f "${PROJECTOR_BIN}" ]; then
   PRETRAIN_ARG="--pretrain_mm_mlp_adapter ${PROJECTOR_BIN}"
 fi
 
-python llava/train/train.py \
+apptainer exec --cleanenv --nv \
+    --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
+    ${YOUR_SIF_FILE} \
+  python llava/train/train.py \
   --model_name_or_path "${MODEL_NAME}" \
   ${PRETRAIN_ARG} \
   --vision_tower "${MOLECULE_TOWER}" \
@@ -125,7 +131,10 @@ echo "➤ TDC TRAINING DONE"
 # --- Evaluation ---
 echo "➤ STARTING TDC EVALUATION"
 
-python llava/eval/eval_tdc.py \
+apptainer exec --cleanenv --nv \
+    --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
+    ${YOUR_SIF_FILE} \
+  python llava/eval/eval_tdc.py \
   --model-path "${OUTPUT_DIR}" \
   --task-group-name "${TDC_TASK_GROUP}" \
   --output-dir "${OUTPUT_DIR}" \
