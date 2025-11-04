@@ -7,9 +7,9 @@
 #SBATCH --gres=gpu:a40:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=96GB
-#SBATCH --job-name=llava
-#SBATCH --output=logs/llava.out
-#SBATCH --error=logs/llava.err
+#SBATCH --job-name=llava_2
+#SBATCH --output=logs/llava_2.out
+#SBATCH --error=logs/llava_2.err
 
 # --- Robust Path Setup ---
 # Use the SLURM_SUBMIT_DIR variable to get the directory where the sbatch command was run.
