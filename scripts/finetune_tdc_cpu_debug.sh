@@ -35,7 +35,8 @@ python llava/train/train.py \
   --tune_mm_mlp_adapter False \
   --output_dir "${OUTPUT_DIR}" \
   --optim "paged_adamw_8bit" \
-  --attn_implementation "sdpa" \
+  --attn_implementation "flash_attention_2" \
+  --bf16 True \
   --num_train_epochs 1 \
   --per_device_train_batch_size 2 \
   --per_device_eval_batch_size 1 \

@@ -255,6 +255,9 @@ class LlavaMetaForCausalLM(ABC):
         
         elif smiles is not None:
             multimodal_features = self.encode_smiles(smiles)
+            # Ensure SMILES embeddings use bfloat16 for downstream consistency / memory savings
+            multimodal_features = multimodal_features.to(torch.bfloat16)
+
             if getattr(self.config, 'debug_mode', False):
                 print(f"[prepare_mm] SMILES embeddings BEFORE unpadding: shape={multimodal_features.shape}")
                 
@@ -356,7 +359,11 @@ class LlavaMetaForCausalLM(ABC):
                 cur_input_ids_noim.append(cur_input_ids[image_token_indices[i]+1:image_token_indices[i+1]])
                 cur_labels_noim.append(cur_labels[image_token_indices[i]+1:image_token_indices[i+1]])
             split_sizes = [x.shape[0] for x in cur_labels_noim]
+            # print(self.get_model().embed_tokens)
+            # print(self.get_model().embed_tokens.weight.dtype)
             cur_input_embeds = self.get_model().embed_tokens(torch.cat(cur_input_ids_noim))
+            # print("DTYPE OF INITIAL INPUT EMBEDS")
+            # print(cur_input_embeds.dtype)
             cur_input_embeds_no_im = torch.split(cur_input_embeds, split_sizes, dim=0)
             cur_new_input_embeds = []
             cur_new_labels = []
