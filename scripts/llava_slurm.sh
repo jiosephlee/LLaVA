@@ -34,7 +34,7 @@ MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
 # Prepared alignment dataset
-DATA_PATH="playground/data/llava_medex_alignment_10k.json"
+DATA_PATH="playground/data/llava_medex_alignment_100k.json"
 
 # Output directory
 OUTPUT_DIR="checkpoints/pretrain_10k"
