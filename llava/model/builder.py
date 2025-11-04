@@ -21,6 +21,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, BitsAn
 import torch
 from llava.model import *
 from llava.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+# Explicitly import LlavaInternForCausalLM
+from llava.model.language_model.llava_intern import LlavaInternForCausalLM
 
 
 def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, load_4bit=False, device_map="auto", device="cuda", use_flash_attn=False, **kwargs):
@@ -40,7 +42,7 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             bnb_4bit_quant_type='nf4'
         )
     else:
-        kwargs['dtype'] = torch.float16
+        kwargs['dtype'] = torch.bfloat16
 
     if use_flash_attn:
         kwargs['attn_implementation'] = 'flash_attention_2'
@@ -84,6 +86,7 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             print('Merging LoRA weights...')
             model = model.merge_and_unload()
             print('Model is loaded...')
+        
         elif model_base is not None:
             # this may be mm projector only
             print('Loading LLaVA from base model...')
@@ -93,6 +96,26 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                 tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=True)
                 cfg_pretrained = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
                 model = LlavaMptForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
+                     # Handle Intern/Qwen models loaded with LlavaInternForCausalLM
+            elif 'intern' in model_name.lower() or 'qwen' in model_name.lower() or \
+            'intern' in model_path.lower() or 'qwen' in model_path.lower():
+                print(f'Loading LLaVA-Intern/Qwen model from: {model_path}')
+                tokenizer = AutoTokenizer.from_pretrained(
+                    model_path, 
+                    use_fast=False, 
+                    padding_side="left", 
+                    trust_remote_code=True
+                )
+                config = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
+                config.attention_bias = False
+                
+                model = LlavaInternForCausalLM.from_pretrained(
+                    model_path,
+                    config=config,
+                    low_cpu_mem_usage=True,
+                    trust_remote_code=True,
+                    **kwargs
+                )
             else:
                 tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
                 cfg_pretrained = AutoConfig.from_pretrained(model_path)
@@ -101,6 +124,8 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             mm_projector_weights = torch.load(os.path.join(model_path, 'mm_projector.bin'), map_location='cpu')
             mm_projector_weights = {k: v.to(torch.float16) for k, v in mm_projector_weights.items()}
             model.load_state_dict(mm_projector_weights, strict=False)
+        
+       
         else:
             if 'mpt' in model_name.lower():
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
@@ -110,6 +135,24 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                 model = LlavaMistralForCausalLM.from_pretrained(
                     model_path,
                     low_cpu_mem_usage=True,
+                    **kwargs
+                )
+            elif 'intern' in model_name.lower() or 'qwen' in model_name.lower() or \
+            'intern' in model_path.lower() or 'qwen' in model_path.lower():
+                print(f'Loading LLaVA-Intern/Qwen model from: {model_path}')
+                tokenizer = AutoTokenizer.from_pretrained(
+                    model_path, 
+                    use_fast=False, 
+                    padding_side="left", 
+                    trust_remote_code=True
+                )
+                config = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
+                
+                model = LlavaInternForCausalLM.from_pretrained(
+                    model_path,
+                    config=config,
+                    low_cpu_mem_usage=True,
+                    trust_remote_code=True,
                     **kwargs
                 )
             else:
@@ -154,9 +197,11 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
 
         vision_tower = model.get_vision_tower()
         if not vision_tower.is_loaded:
-            vision_tower.load_model(device_map=device_map)
+            vision_tower.load_model(device_map=device_map, dtype=torch.float32)
         if device_map != 'auto':
-            vision_tower.to(device=device_map, dtype=torch.float16)
+            vision_tower.to(device=device_map, dtype=torch.float32)
+        print("VISION TOWER DURING INFERNECE")
+        print(vision_tower)
         image_processor = vision_tower.image_processor
 
     if hasattr(model.config, "max_sequence_length"):

@@ -53,31 +53,31 @@ class LlavaInternForCausalLM(Qwen3ForCausalLM, LlavaMetaForCausalLM):
         # Initialize weights and apply final processing
         self.post_init()
 
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-        """
-        Manually implements the from_pretrained logic to make the process explicit.
-        """
-        # 1. Load the pretrained Qwen3 model from Hugging Face.
-        #    This gives us a standard Qwen3 model with all the language model weights.
-        qwen_model = AutoModelForCausalLM.from_pretrained(
-            pretrained_model_name_or_path,
-            *model_args,
-            **kwargs
-        )
+    # @classmethod
+    # def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+    #     """
+    #     Manually implements the from_pretrained logic to make the process explicit.
+    #     """
+    #     # 1. Load the pretrained Qwen3 model from Hugging Face.
+    #     #    This gives us a standard Qwen3 model with all the language model weights.
+    #     qwen_model = AutoModelForCausalLM.from_pretrained(
+    #         pretrained_model_name_or_path,
+    #         *model_args,
+    #         **kwargs
+    #     )
 
-        # 2. Create an instance of our custom LlavaInternForCausalLM class.
-        #    We use the configuration from the loaded Qwen model to ensure consistency.
-        config = qwen_model.config
-        model = cls(config)
+    #     # 2. Create an instance of our custom LlavaInternForCausalLM class.
+    #     #    We use the configuration from the loaded Qwen model to ensure consistency.
+    #     config = qwen_model.config
+    #     model = cls(config)
 
-        # 3. Copy the weights from the loaded Qwen model to our new Llava model.
-        #    `strict=False` is important here. It allows us to load the state dict
-        #    even if our Llava model has extra parameters (like vision tower components)
-        #    that are not present in the original Qwen model.
-        model.load_state_dict(qwen_model.state_dict(), strict=False)
-
-        return model
+    #     # 3. Copy the weights from the loaded Qwen model to our new Llava model.
+    #     #    `strict=False` is important here. It allows us to load the state dict
+    #     #    even if our Llava model has extra parameters (like vision tower components)
+    #     #    that are not present in the original Qwen model.
+    #     model.load_state_dict(qwen_model.state_dict(), strict=False)
+    #     print(model)
+    #     return model
 
     def get_model(self):
         return self.model

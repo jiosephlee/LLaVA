@@ -1137,7 +1137,6 @@ def train(attn_implementation=None):
                 model_args.model_name_or_path, 
                 trust_remote_code=True
             )
-            config.attention_bias = False
             
             model_class = DebugLlavaInternForCausalLM if training_args.debug_mode else LlavaInternForCausalLM
             print(f"--- Using model class: {model_class.__name__} ---")
@@ -1156,7 +1155,6 @@ def train(attn_implementation=None):
             model_args.model_name_or_path, 
             trust_remote_code=True
         )
-        config.attention_bias = False
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             cache_dir=training_args.cache_dir,

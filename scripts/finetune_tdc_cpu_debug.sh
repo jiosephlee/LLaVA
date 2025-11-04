@@ -7,7 +7,7 @@ echo "➤ CPU TDC DEBUG START"
 
 # --- Configuration ---
 # Base language model (Intern)
-MODEL_NAME="Qwen/Qwen2.5-1.5B"
+MODEL_NAME="Qwen/Qwen3-0.6B"
 # Projector weights from the pretrain step
 PROJECTOR_BIN="checkpoints/debug_cpu_intern_pretrain/mm_projector.bin"
 # Molecule encoder model (MolFormer)
@@ -16,7 +16,7 @@ MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
 TDC_TASK_GROUP="${2:-Tox}"
 
-OUTPUT_DIR="checkpoints/debug_cpu_tdc_${TDC_TASK_GROUP}"
+OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_${TDC_TASK_GROUP}"
 
 # Use projector weights if available
 PRETRAIN_ARG=""
@@ -39,7 +39,7 @@ python llava/train/train.py \
   --num_train_epochs 1 \
   --per_device_train_batch_size 2 \
   --per_device_eval_batch_size 1 \
-  --gradient_accumulation_steps 1 \
+  --gradient_accumulation_steps 2 \
   --eval_strategy "no" \
   --save_strategy "no" \
   --learning_rate 1e-4 \
@@ -47,7 +47,7 @@ python llava/train/train.py \
   --warmup_ratio 0.0 \
   --lr_scheduler_type "linear" \
   --model_max_length 1024 \
-  --gradient_checkpointing False \
+  --gradient_checkpointing True \
   --dataloader_num_workers 0 \
   --lazy_preprocess True \
   --report_to none \
@@ -60,7 +60,7 @@ echo "➤ TDC TRAINING DONE"
 # --- Evaluation ---
 echo "➤ STARTING TDC EVALUATION"
 
-python llava/train/eval_tdc.py \
+python llava/eval/eval_tdc.py \
   --model-path "${OUTPUT_DIR}" \
   --task-group-name "${TDC_TASK_GROUP}" \
   --output-dir "${OUTPUT_DIR}" \

@@ -9,7 +9,7 @@ echo "➤ CPU DEBUG START"
 
 # --- Configuration ---
 # Base language model (Intern-S1)
-MODEL_NAME="Qwen/Qwen2.5-1.5B"
+MODEL_NAME="Qwen/Qwen3-0.6B"
 
 # Molecule encoder model (MolFormer)
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
@@ -36,9 +36,9 @@ python llava/train/train.py \
     --optim "paged_adamw_8bit" \
     --attn_implementation "sdpa" \
     --num_train_epochs 1 \
-    --per_device_train_batch_size 1 \
+    --per_device_train_batch_size 2 \
     --per_device_eval_batch_size 1 \
-    --gradient_accumulation_steps 1 \
+    --gradient_accumulation_steps 2 \
     --eval_strategy "no" \
     --save_strategy "no" \
     --learning_rate 1e-3 \
@@ -52,7 +52,7 @@ python llava/train/train.py \
     --logging_steps 1 \
     --report_to wandb \
     --debug_mode False \
-    --max_steps 1000 \
+    --max_steps 100 \
 
 echo "➤ CPU DEBUG DONE"
 

@@ -32,8 +32,11 @@ class LlavaMetaModel:
         super(LlavaMetaModel, self).__init__(config)
 
         if hasattr(config, "mm_vision_tower"):
-            self.vision_tower = build_vision_tower(config, delay_load=True)
+            print("BUILDING VISION TOWER")
+            config.dtype = "float32"
+            self.vision_tower = build_vision_tower(config, delay_load=False)
             self.mm_projector = build_vision_projector(config)
+            config.dtype = "bfloat16"
 
             if 'unpad' in getattr(config, 'mm_patch_merge_type', ''):
                 self.image_newline = nn.Parameter(
@@ -173,6 +176,8 @@ class LlavaMetaForCausalLM(ABC):
                 except Exception:
                     pass
         vision_tower = self.get_vision_tower()
+        #print(vision_tower.dtype)
+
         if vision_tower is None or (images is None and smiles is None) or input_ids.shape[1] == 1:
             return input_ids, position_ids, attention_mask, past_key_values, None, labels
             
@@ -187,6 +192,7 @@ class LlavaMetaForCausalLM(ABC):
                 if getattr(self.config, 'debug_mode', False):
                     print(f"[prepare_mm] Image batch: num_images={len(images) if type(images) is list else images.shape[0]}, concat_shape={concat_images.shape}")
                 multimodal_features = self.encode_images(concat_images)
+                print(multimodal_features.dtype)
                 if getattr(self.config, 'debug_mode', False):
                     print(f"[prepare_mm] Image embeddings after encode_images: shape={multimodal_features.shape}")
                 split_sizes = [image.shape[0] for image in images]
@@ -467,7 +473,8 @@ class LlavaMetaForCausalLM(ABC):
             assert (new_labels == IGNORE_INDEX).logical_or(
                 (new_labels >= 0).logical_and(new_labels < vocab)
             ).all(), "labels contain invalid ids"
-
+        # print("PRINTING THE DTYPE OF FINAL INPUT EMBEDS")
+        # print(new_input_embeds.dtype)
         return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels
 
     def initialize_vision_tokenizer(self, model_args, tokenizer):

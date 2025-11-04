@@ -3,70 +3,72 @@ from .clip_encoder import CLIPVisionTower, CLIPVisionTowerS2
 
 import torch.nn as nn
 import torch
+from .molformer import MolFormerVisionTower   # NEW import
+
 
 from transformers import AutoTokenizer, AutoModel
 
-class MolFormerVisionTower(nn.Module):
-    def __init__(self, vision_tower, args, delay_load=False):
-        super().__init__()
-        self.vision_tower_name = vision_tower
-        self.select_layer = args.mm_vision_select_layer
-        self.select_feature = args.mm_vision_select_feature
+# class MolFormerVisionTower(nn.Module):
+#     def __init__(self, vision_tower, args, delay_load=False):
+#         super().__init__()
+#         self.vision_tower_name = vision_tower
+#         self.select_layer = args.mm_vision_select_layer
+#         self.select_feature = args.mm_vision_select_feature
 
-        if not delay_load:
-            self.load_model()
-        else:
-            self.cfg_only = AutoModel.from_pretrained(self.vision_tower_name, trust_remote_code=True).config
+#         if not delay_load:
+#             self.load_model()
+#         else:
+#             self.cfg_only = AutoModel.from_pretrained(self.vision_tower_name, trust_remote_code=True, dtype=torch.float32).config
 
-    def load_model(self, device_map=None):
-        self.image_processor = None
-        self.mol_processor = AutoTokenizer.from_pretrained(self.vision_tower_name, trust_remote_code=True)
-        self.vision_tower = AutoModel.from_pretrained(self.vision_tower_name, trust_remote_code=True)
-        self.vision_tower.requires_grad_(False)
-        self.is_loaded = True
+#     def load_model(self, device_map=None):
+#         self.image_processor = None
+#         self.mol_processor = AutoTokenizer.from_pretrained(self.vision_tower_name, trust_remote_code=True)
+#         self.vision_tower = AutoModel.from_pretrained(self.vision_tower_name, trust_remote_code=True)
+#         self.vision_tower.requires_grad_(False)
+#         self.is_loaded = True
 
-    @torch.no_grad()
-    def forward(self, smiles):
+#     @torch.no_grad()
+#     def forward(self, smiles):
         
-        # Manually move to device
-        smiles_input_ids = smiles['input_ids'].to(self.vision_tower.device)
-        smiles_attention_mask = smiles['attention_mask'].to(self.vision_tower.device)
+#         # Manually move to device
+#         smiles_input_ids = smiles['input_ids'].to(self.vision_tower.device)
+#         smiles_attention_mask = smiles['attention_mask'].to(self.vision_tower.device)
         
-        outputs = self.vision_tower(
-            input_ids=smiles_input_ids,
-            attention_mask=smiles_attention_mask,
-            output_hidden_states=True
-        )
+#         outputs = self.vision_tower(
+#             input_ids=smiles_input_ids,
+#             attention_mask=smiles_attention_mask,
+#             output_hidden_states=True
+#         )
         
-        if self.select_feature == 'pooler':
-            feature_output = outputs.pooler_output.unsqueeze(1)
-        else:
-            feature_output = outputs.last_hidden_state
+#         if self.select_feature == 'pooler':
+#             feature_output = outputs.pooler_output.unsqueeze(1)
+#         else:
+#             feature_output = outputs.last_hidden_state
 
-        return feature_output
+#         return feature_output
 
-    @property
-    def dummy_feature(self):
-        return torch.randn(1, 3, 224, 224) # Placeholder for dummy feature
+#     @property
+#     def dummy_feature(self):
+#         return torch.randn(1, 3, 224, 224) # Placeholder for dummy feature
 
-    @property
-    def dtype(self):
-        return self.vision_tower.dtype
+#     @property
+#     def dtype(self):
+#         return self.vision_tower.dtype
 
-    @property
-    def device(self):
-        return self.vision_tower.device
+#     @property
+#     def device(self):
+#         return self.vision_tower.device
 
-    @property
-    def config(self):
-        if self.is_loaded:
-            return self.vision_tower.config
-        else:
-            return self.cfg_only
+#     @property
+#     def config(self):
+#         if self.is_loaded:
+#             return self.vision_tower.config
+#         else:
+#             return self.cfg_only
 
-    @property
-    def hidden_size(self):
-        return 768
+#     @property
+#     def hidden_size(self):
+#         return 768
 
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
