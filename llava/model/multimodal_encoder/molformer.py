@@ -71,6 +71,7 @@ class MolFormerVisionTower(nn.Module):
         """
         if not self.is_loaded or self.vision_tower is None:
             raise RuntimeError("MolFormerVisionTower must be loaded via load_model() before forward().")
+        
 
         dev = next(self.vision_tower.parameters()).device
         inputs = {

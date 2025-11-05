@@ -1288,7 +1288,10 @@ def train(attn_implementation=None):
         training_args.use_im_start_end = model_args.mm_use_im_start_end
         model.config.mm_use_im_patch_token = model_args.mm_use_im_patch_token
         model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
+            
+    # print("COMPIILING MODEL...")
 
+    # model = torch.compile(model)
     if training_args.bits in [4, 8]:
         from peft.tuners.lora import LoraLayer
         for name, module in model.named_modules():
@@ -1448,6 +1451,30 @@ def train(attn_implementation=None):
             model.config.save_pretrained(training_args.output_dir)
             model.save_pretrained(training_args.output_dir, state_dict=state_dict)
             torch.save(non_lora_state_dict, os.path.join(training_args.output_dir, 'non_lora_trainables.bin'))
+            # Minimal additional step: merge LoRA adapters and save a merged model+tokenizer
+            try:
+                # Import builder helper that knows how to load and merge LoRA checkpoints
+                from llava.model.builder import load_pretrained_model
+
+                merged_dir = os.path.join(training_args.output_dir, "merged")
+                os.makedirs(merged_dir, exist_ok=True)
+                rank0_print(f"Merging LoRA weights and saving merged model to {merged_dir} ...")
+
+                # load_pretrained_model will load the saved adapters from training_args.output_dir,
+                # merge them with the base model, and return a merged model and tokenizer.
+                tokenizer_merged, model_merged, _, _ = load_pretrained_model(
+                    training_args.output_dir,
+                    model_args.model_name_or_path,
+                    model_args.model_name_or_path,
+                    device_map="cpu",
+                    device="cpu",
+                )
+
+                model_merged.save_pretrained(merged_dir)
+                tokenizer_merged.save_pretrained(merged_dir)
+                rank0_print(f"Merged model saved to {merged_dir}")
+            except Exception as e:
+                rank0_print("Warning: failed to merge LoRA weights during save:", e)
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,
                                        output_dir=training_args.output_dir)

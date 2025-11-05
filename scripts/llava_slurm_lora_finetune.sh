@@ -7,13 +7,9 @@
 #SBATCH --gres=gpu:a40:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=96GB
-#SBATCH --job-name=llava
-#SBATCH --output=logs/llava.out
-#SBATCH --error=logs/llava.err
-
-# --- Robust Path Setup ---
-# Use the SLURM_SUBMIT_DIR variable to get the directory where the sbatch command was run.
-# IMPORTANT: This script must be submitted with `sbatch` from the root of the LLaVA project.
+#SBATCH --job-name=llava_3
+#SBATCH --output=logs/llava_3.out
+#SBATCH --error=logs/llava_3.err
 
 echo "➤ START"
 echo "➤ SETTING UP HOST CUDA"
@@ -59,6 +55,7 @@ apptainer exec --cleanenv --nv \
   --model_name_or_path "${MODEL_NAME}" \
   ${PRETRAIN_ARG} \
   --vision_tower "${MOLECULE_TOWER}" \
+  --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
   --version intern \
   --task_group_name "${TDC_TASK_GROUP}" \
   --mm_projector_type mlp2x_gelu \
@@ -90,6 +87,8 @@ echo "➤ TDC TRAINING DONE"
 
 # --- Evaluation ---
 echo "➤ STARTING TDC EVALUATION"
+
+OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_${TDC_TASK_GROUP}/merged"
 
 apptainer exec --cleanenv --nv \
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
