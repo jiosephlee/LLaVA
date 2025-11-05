@@ -3,13 +3,13 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=2:00:00
-#SBATCH --gres=gpu:a40:1
+#SBATCH --time=12:00:00
+#SBATCH --gres=gpu:a100:1
 #SBATCH --partition=ai
-#SBATCH --mem-per-gpu=96GB
-#SBATCH --job-name=llava_100k
-#SBATCH --output=logs/llava_100k.out
-#SBATCH --error=logs/llava_100k.err
+#SBATCH --mem-per-gpu=160GB
+#SBATCH --job-name=llava_100k_all
+#SBATCH --output=logs/llava_100k_all.out
+#SBATCH --error=logs/llava_100k_all.err
 
 # --- Robust Path Setup ---
 # Use the SLURM_SUBMIT_DIR variable to get the directory where the sbatch command was run.
@@ -33,18 +33,15 @@ MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
 # Molecule encoder model (MolFormer)
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
-# Prepared alignment dataset
-DATA_PATH="playground/data/llava_medex_alignment_10k.json"
-
 # Projector weights from the pretrain step
 PROJECTOR_BIN="checkpoints/pretrain_100k/mm_projector.bin"
 # Molecule encoder model (MolFormer)
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
-TDC_TASK_GROUP="${2:-Tox}"
+TDC_TASK_GROUP="${2:-All}"
 
-OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_100k_${TDC_TASK_GROUP}_1ep_bs32_1e4"
+OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_all_100k_${TDC_TASK_GROUP}_5ep_bs64_5e4"
 
 # Use projector weights if available
 PRETRAIN_ARG=""
@@ -68,15 +65,16 @@ apptainer exec --cleanenv --nv \
   --optim "paged_adamw_8bit" \
   --attn_implementation "flash_attention_2" \
   --bf16 True \
-  --num_train_epochs 1 \
-  --per_device_train_batch_size 1 \
+  --num_train_epochs 5 \
+  --per_device_train_batch_size 2 \
   --per_device_eval_batch_size 1 \
+  --logging_steps 1 \
   --gradient_accumulation_steps 32 \
   --eval_strategy "no" \
   --save_strategy "no" \
-  --learning_rate 1e-4 \
+  --learning_rate 8e-5 \
   --weight_decay 0.0 \
-  --warmup_ratio 0.03 \
+  --warmup_ratio 0.1 \
   --lr_scheduler_type "cosine" \
   --model_max_length 1024 \
   --gradient_checkpointing True \

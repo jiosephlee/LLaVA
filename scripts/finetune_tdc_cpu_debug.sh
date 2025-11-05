@@ -16,7 +16,7 @@ MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
 TDC_TASK_GROUP="${2:-Tox}"
 
-OUTPUT_DIR="checkpoints/llava_qwen2b_tdc_${TDC_TASK_GROUP}"
+OUTPUT_DIR="checkpoints/llava_qwen2b_tdc_weight_decay_${TDC_TASK_GROUP}"
 
 # Use projector weights if available
 PRETRAIN_ARG=""
@@ -45,7 +45,7 @@ python llava/train/train.py \
   --eval_strategy "no" \
   --save_strategy "no" \
   --learning_rate 8e-5 \
-  --weight_decay 0.0 \
+  --weight_decay 0.1 \
   --warmup_ratio 0.1 \
   --lr_scheduler_type "cosine" \
   --model_max_length 1024 \
@@ -61,7 +61,7 @@ echo "➤ TDC TRAINING DONE"
 # --- Evaluation ---
 
 echo "➤ STARTING TDC EVALUATION"
-OUTPUT_DIR="checkpoints/llava_qwen2b_tdc_${TDC_TASK_GROUP}"
+OUTPUT_DIR="checkpoints/llava_qwen2b_tdc_weight_decay_${TDC_TASK_GROUP}"
 
 python llava/eval/eval_tdc.py \
   --model-path "${OUTPUT_DIR}" \

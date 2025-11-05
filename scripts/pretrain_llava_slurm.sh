@@ -3,13 +3,13 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=2:00:00
+#SBATCH --time=24:00:00
 #SBATCH --gres=gpu:a40:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=96GB
-#SBATCH --job-name=llava
-#SBATCH --output=logs/llava.out
-#SBATCH --error=logs/llava.err
+#SBATCH --job-name=llava_pretrain_750k
+#SBATCH --output=logs/llava_750k.out
+#SBATCH --error=logs/llava_750k.err
 
 # --- Robust Path Setup ---
 # Use the SLURM_SUBMIT_DIR variable to get the directory where the sbatch command was run.
@@ -34,10 +34,10 @@ MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
 # Set the path to your prepared alignment dataset
-DATA_PATH="playground/data/llava_medex_alignment_10k.json"
+DATA_PATH="playground/data/llava_medex_alignment_750k.json"
 
 # Set the output directory for the pre-trained projector and model weights
-OUTPUT_DIR="checkpoints/llava-$MODEL_NAME-molformer-pretrain"
+OUTPUT_DIR="checkpoints/pretrain_750k_bs64_1e3"
 
 # Execute the python script INSIDE the container
 # --nv: Mounts the host NVIDIA drivers
@@ -61,16 +61,16 @@ apptainer exec --cleanenv --nv \
         --optim "paged_adamw_8bit" \
         --attn_implementation "flash_attention_2" \
         --num_train_epochs 1 \
-        --per_device_train_batch_size 16 \
-        --per_device_eval_batch_size 4 \
-        --gradient_accumulation_steps 1 \
+        --per_device_train_batch_size 8 \
+        --per_device_eval_batch_size 1 \
+        --gradient_accumulation_steps 8 \
         --eval_strategy "no" \
         --save_strategy "no" \
         --save_steps 24000 \
         --save_total_limit 1 \
         --learning_rate 1e-3 \
         --weight_decay 0. \
-        --warmup_ratio 0.03 \
+        --warmup_ratio 0.1 \
         --lr_scheduler_type "cosine" \
         --logging_steps 1 \
         --tf32 True \
@@ -91,10 +91,10 @@ MODEL_PATH=$OUTPUT_DIR
 
 # Set the TDC task group you want to fine-tune on
 # e.g., "Tox", "ADMET_group", "Skin_Reaction"
-TDC_TASK_GROUP="Tox"
+TDC_TASK_GROUP="All"
 
 # Set the output directory for this TDC fine-tuning run
-OUTPUT_DIR="./checkpoints/llava-internlm/Intern-S1-mini-tdc-$TDC_TASK_GROUP-finetune"
+OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_all_750k_${TDC_TASK_GROUP}_5ep_bs64_5e4"
 
 apptainer exec --cleanenv --nv \
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
@@ -109,19 +109,19 @@ apptainer exec --cleanenv --nv \
     --image_aspect_ratio pad \
     --bf16 True \
     --optim "paged_adamw_8bit" \
-    --attn_implementation "sdpa" \
+    --attn_implementation "flash_attention_2" \
     --output_dir $OUTPUT_DIR \
-    --num_train_epochs 10 \
-    --per_device_train_batch_size 4 \
+    --num_train_epochs 5 \
+    --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 1 \
+    --gradient_accumulation_steps 64 \
     --eval_strategy "no" \
     --save_strategy "no" \
     --save_steps 2000 \
     --save_total_limit 1 \
     --learning_rate 8e-5 \
     --weight_decay 0. \
-    --warmup_ratio 0.03 \
+    --warmup_ratio 0.1 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --tf32 True \
@@ -131,3 +131,26 @@ apptainer exec --cleanenv --nv \
     --lazy_preprocess True \
     --report_to wandb \
     --debug_mode True
+
+    
+echo "➤ TDC TRAINING DONE"
+
+# --- Evaluation ---
+echo "➤ STARTING TDC EVALUATION"
+
+apptainer exec --cleanenv --nv \
+    --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
+    ${YOUR_SIF_FILE} \
+  python llava/eval/eval_tdc.py \
+  --model-path "${OUTPUT_DIR}" \
+  --task-group-name "${TDC_TASK_GROUP}" \
+  --output-dir "${OUTPUT_DIR}" \
+  --conv-mode "intern" \
+  --split "test"
+
+echo "➤ TDC EVALUATION DONE"
+
+
+echo "➤ CPU TDC DEBUG (TRAIN + EVAL) DONE"
+
+
