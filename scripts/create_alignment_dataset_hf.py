@@ -45,9 +45,7 @@ def create_alignment_dataset_from_rows(rows, output_path: str, num_rows: int):
 
         try:
             # Prefer direct 'SMILES' column if present (Hugging Face dataset provides it)
-            smiles = (row.get('SMILES') or '').strip()
-
-
+            smiles = row
             if smiles:
                 if len(smiles) > 100:
                     skipped_count += 1
