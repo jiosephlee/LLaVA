@@ -103,7 +103,8 @@ apptainer exec --cleanenv --nv \
   --lazy_preprocess True \
   --report_to wandb \
   --debug_mode False \
-  --ensure_image_token_if_missing True
+  --ensure_image_token_if_missing True \
+  --max_steps 1562 \
 
 echo "➤ STAGE 1 DONE"
 
