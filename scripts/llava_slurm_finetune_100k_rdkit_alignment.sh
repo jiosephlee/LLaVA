@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=24:00:00
+#SBATCH --time=36:00:00
 #SBATCH --gres=gpu:a40:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=96GB
@@ -32,7 +32,7 @@ MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 # Set the path to your prepared alignment dataset
 DATA_PATH="playground/data/llava_medex_rdkit_alignment_100k.json"
 
-PROJECTOR_BIN="checkpoints/pretrain_750k/mm_projector.bin"
+PROJECTOR_BIN="checkpoints/pretrain_750k_bs64_1e3/mm_projector.bin"
 
 # Set the output directory for the alignment stage (with unfrozen LM)
 ALIGNMENT_OUTPUT_DIR="checkpoints/pretrain_750k_mid_stage_alignment_100k_rdkit"
@@ -111,24 +111,14 @@ echo "➤ ALIGNMENT STAGE DONE"
 # --- Stage 2: TDC Fine-tuning ---
 echo "➤ STARTING TDC FINE-TUNING STAGE"
 
-# Load checkpoint from alignment stage (check for checkpoint subdirectories first, then output dir)
-ALIGNMENT_CHECKPOINT=$(ls -td ${ALIGNMENT_OUTPUT_DIR}/checkpoint-* 2>/dev/null | head -n 1)
 
-if [ -n "${ALIGNMENT_CHECKPOINT}" ]; then
-  echo "➤ Loading checkpoint from Alignment Stage: ${ALIGNMENT_CHECKPOINT}"
-  FINETUNE_MODEL_PATH="${ALIGNMENT_CHECKPOINT}"
-  FINETUNE_PROJECTOR_PATH="${ALIGNMENT_CHECKPOINT}/mm_projector.bin"
-else
-  echo "⚠️  WARNING: Alignment checkpoint not found, using original model"
-  FINETUNE_MODEL_PATH="${MODEL_NAME}"
-  FINETUNE_PROJECTOR_PATH="checkpoints/pretrain_750k_bs64_1e3/mm_projector.bin"
-fi
+FINETUNE_PROJECTOR_PATH="${ALIGNMENT_OUTPUT_DIR}/mm_projector.bin"
 
 apptainer exec --cleanenv --nv \
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
     ${YOUR_SIF_FILE} \
   python llava/train/train.py \
-  --model_name_or_path "${FINETUNE_MODEL_PATH}" \
+  --model_name_or_path "${MODEL_NAME}" \
   --pretrain_mm_mlp_adapter "${FINETUNE_PROJECTOR_PATH}" \
   --vision_tower "${MOLECULE_TOWER}" \
   --version intern \

@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=24:00:00
+#SBATCH --time=36:00:00
 #SBATCH --gres=gpu:a40:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=96GB
@@ -35,7 +35,7 @@ DATA_PATH="playground/data/llava_medex_alignment_100k.json"
 PROJECTOR_BIN="checkpoints/pretrain_750k_bs64_1e3/mm_projector.bin"
 
 # Set the output directory for the alignment stage (with unfrozen LM)
-ALIGNMENT_OUTPUT_DIR="checkpoints/pretrain_750k_mid_stage_alignment_100k_smiles"
+ALIGNMENT_OUTPUT_DIR="checkpoints/pretrain_750k_mid_stage_alignment_100k_smiles/"
 
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
 TDC_TASK_GROUP="${1:-All}"
@@ -68,67 +68,58 @@ echo "   Learning Rate: ${FINETUNE_LR}"
 echo "   Output Directory: ${FINETUNE_OUTPUT_DIR}"
 echo ""
 
-apptainer exec --cleanenv --nv \
-    --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
-    ${YOUR_SIF_FILE} \
-  python llava/train/train.py \
-  --model_name_or_path "${MODEL_NAME}" \
-  --pretrain_mm_mlp_adapter "${PROJECTOR_BIN}" \
-  --version intern \
-  --data_path "${DATA_PATH}" \
-  --vision_tower "${MOLECULE_TOWER}" \
-  --mm_projector_type mlp2x_gelu \
-  --tune_mm_mlp_adapter True \
-  --mm_use_im_start_end False \
-  --mm_use_im_patch_token False \
-  --mm_vision_select_feature "last_hidden_state" \
-  --group_by_modality_length False \
-  --bf16 True \
-  --output_dir "${ALIGNMENT_OUTPUT_DIR}" \
-  --optim "paged_adamw_8bit" \
-  --attn_implementation "flash_attention_2" \
-  --num_train_epochs 1 \
-  --per_device_train_batch_size 8 \
-  --per_device_eval_batch_size 1 \
-  --gradient_accumulation_steps 8 \
-  --eval_strategy "no" \
-  --save_strategy "no" \
-  --save_total_limit 1 \
-  --learning_rate 1e-3 \
-  --weight_decay 0.0 \
-  --warmup_ratio 0.1 \
-  --lr_scheduler_type "cosine" \
-  --logging_steps 1 \
-  --model_max_length 4096 \
-  --gradient_checkpointing True \
-  --dataloader_num_workers 4 \
-  --lazy_preprocess True \
-  --report_to wandb \
-  --debug_mode False
+# apptainer exec --cleanenv --nv \
+#     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
+#     ${YOUR_SIF_FILE} \
+#   python llava/train/train.py \
+#   --model_name_or_path "${MODEL_NAME}" \
+#   --pretrain_mm_mlp_adapter "${PROJECTOR_BIN}" \
+#   --version intern \
+#   --data_path "${DATA_PATH}" \
+#   --vision_tower "${MOLECULE_TOWER}" \
+#   --mm_projector_type mlp2x_gelu \
+#   --tune_mm_mlp_adapter True \
+#   --mm_use_im_start_end False \
+#   --mm_use_im_patch_token False \
+#   --mm_vision_select_feature "last_hidden_state" \
+#   --group_by_modality_length False \
+#   --bf16 True \
+#   --output_dir "${ALIGNMENT_OUTPUT_DIR}" \
+#   --optim "paged_adamw_8bit" \
+#   --attn_implementation "flash_attention_2" \
+#   --num_train_epochs 1 \
+#   --per_device_train_batch_size 8 \
+#   --per_device_eval_batch_size 1 \
+#   --gradient_accumulation_steps 8 \
+#   --eval_strategy "no" \
+#   --save_strategy "no" \
+#   --save_total_limit 1 \
+#   --learning_rate 1e-3 \
+#   --weight_decay 0.0 \
+#   --warmup_ratio 0.1 \
+#   --lr_scheduler_type "cosine" \
+#   --logging_steps 1 \
+#   --model_max_length 4096 \
+#   --gradient_checkpointing True \
+#   --dataloader_num_workers 4 \
+#   --lazy_preprocess True \
+#   --report_to wandb \
+#   --debug_mode False
 
 echo "➤ ALIGNMENT STAGE DONE"
 
 # --- Stage 2: TDC Fine-tuning ---
 echo "➤ STARTING TDC FINE-TUNING STAGE"
 
-# Load checkpoint from alignment stage (check for checkpoint subdirectories first, then output dir)
-ALIGNMENT_CHECKPOINT=$(ls -td ${ALIGNMENT_OUTPUT_DIR}/checkpoint-* 2>/dev/null | head -n 1)
 
-if [ -n "${ALIGNMENT_CHECKPOINT}" ]; then
-  echo "➤ Loading checkpoint from Alignment Stage: ${ALIGNMENT_CHECKPOINT}"
-  FINETUNE_MODEL_PATH="${ALIGNMENT_CHECKPOINT}"
-  FINETUNE_PROJECTOR_PATH="${ALIGNMENT_CHECKPOINT}/mm_projector.bin"
-else
-  echo "⚠️  WARNING: Alignment checkpoint not found, using original model"
-  FINETUNE_MODEL_PATH="${MODEL_NAME}"
-  FINETUNE_PROJECTOR_PATH="checkpoints/pretrain_750k/mm_projector.bin"
-fi
+FINETUNE_PROJECTOR_PATH="${ALIGNMENT_OUTPUT_DIR}/mm_projector.bin"
+
 
 apptainer exec --cleanenv --nv \
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
     ${YOUR_SIF_FILE} \
   python llava/train/train.py \
-  --model_name_or_path "${FINETUNE_MODEL_PATH}" \
+  --model_name_or_path "${MODEL_NAME}" \
   --pretrain_mm_mlp_adapter "${FINETUNE_PROJECTOR_PATH}" \
   --vision_tower "${MOLECULE_TOWER}" \
   --version intern \
