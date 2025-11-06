@@ -1,0 +1,28 @@
+--- Therapeutic Tuning Experiment Summary ---
+
+Model ID: llava_interns1mini_tdc_Tox
+Task Group: Tox
+Tasks: Skin_Reaction, hERG, ClinTox, DILI, Carcinogens_Lagunin
+Timestamp: 2025-11-04 23:26:13
+
+--- Overall Performance ---
+Average Validation Score: N/A
+Average Test Score: 0.5648 (±0.1227)
+
+--- Performance on Molecules Covered by Pre-training ---
+Average Validation Score (Covered): N/A
+Average Test Score (Covered): N/A
+
+--- Performance on Molecules NOT Covered by Pre-training ---
+Average Validation Score (Uncovered): N/A
+Average Test Score (Uncovered): N/A
+
+
+--- Detailed Per-Task Results ---
+Task                 | Metric     | Val Overall  | Val Covered  | Val Uncovered  | Test Overall | Test Covered | Test Uncovered
+--------------------------------------------------------------------------------------------------------------------------------
+Skin_Reaction        | auroc      | N/A          | N/A          | N/A            | 0.4872       | N/A          | N/A           
+hERG                 | auroc      | N/A          | N/A          | N/A            | 0.5272       | N/A          | N/A           
+ClinTox              | auroc      | N/A          | N/A          | N/A            | 0.5427       | N/A          | N/A           
+DILI                 | auroc      | N/A          | N/A          | N/A            | 0.4630       | N/A          | N/A           
+Carcinogens_Lagunin  | accuracy   | N/A          | N/A          | N/A            | 0.8036       | N/A          | N/A           

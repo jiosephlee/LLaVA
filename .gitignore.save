@@ -9,7 +9,7 @@ dist
 *.log.*
 *.json
 *.jsonl
-logs/
+
 # Data
 !**/alpaca-data-conversation.json
 
@@ -27,8 +27,7 @@ checkpoints/**/*.pth
 checkpoints/**/*.bin
 checkpoints/**/*.ckpt
 checkpoints/**/*.safetensors
-checkpoints/**/*.py
-checkpoints/**/*.model 
+checkpoi
 ckpts*
 
 .ipynb_checkpoints
