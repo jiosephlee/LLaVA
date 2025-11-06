@@ -3,7 +3,6 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-<<<<<<< HEAD
 #SBATCH --time=14:00:00
 #SBATCH --gres=gpu:a100:1
 #SBATCH --partition=ai

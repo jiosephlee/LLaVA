@@ -7,9 +7,9 @@
 #SBATCH --gres=gpu:a100:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=160GB
-#SBATCH --job-name=smiles_alignment
-#SBATCH --output=logs/llava_pretrained_750k_smiles_mid_100k_alignment.out
-#SBATCH --error=logs/llava_pretrained_750k_smiles_mid_100k_alignment.err
+#SBATCH --job-name=rdkit_alignment
+#SBATCH --output=logs/llava_pretrained_750k_rdkit_mid_100k_alignment.out
+#SBATCH --error=logs/llava_pretrained_750k_rdkit_mid_100k_alignment.err
 
 echo "➤ START"
 echo "➤ SETTING UP HOST CUDA"
@@ -30,12 +30,12 @@ MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
 # Set the path to your prepared alignment dataset
-DATA_PATH="playground/data/llava_medex_alignment_100k.json"
+DATA_PATH="playground/data/llava_medex_rdkit_alignment_100k.json"
 
 PROJECTOR_BIN="checkpoints/pretrain_750k/mm_projector.bin"
 
 # Set the output directory for the alignment stage (with unfrozen LM)
-ALIGNMENT_OUTPUT_DIR="checkpoints/pretrain_750k_mid_stage_alignment_100k_smiles"
+ALIGNMENT_OUTPUT_DIR="checkpoints/pretrain_750k_mid_stage_alignment_100k_rdkit"
 
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
 TDC_TASK_GROUP="${1:-All}"
@@ -55,7 +55,7 @@ FINETUNE_EFF_BS=$((FINETUNE_BATCH_SIZE * FINETUNE_GRAD_ACCUM))
 FINETUNE_LR_FILENAME=$(echo "${FINETUNE_LR}" | sed 's/e-/e/g' | sed 's/\.//g')
 
 # Set the output directory for TDC fine-tuning
-FINETUNE_OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_all_100k_mid_stage_alignment_100k_smiles_${TDC_TASK_GROUP}_${FINETUNE_EPOCHS}ep_bs${FINETUNE_EFF_BS}_${FINETUNE_LR_FILENAME}"
+FINETUNE_OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_all_100k_mid_stage_alignment_100k_rdkit_${TDC_TASK_GROUP}_${FINETUNE_EPOCHS}ep_bs${FINETUNE_EFF_BS}_${FINETUNE_LR_FILENAME}"
 
 # Display hyperparameters
 echo "➤ HYPERPARAMETERS:"

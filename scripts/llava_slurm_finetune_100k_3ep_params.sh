@@ -7,9 +7,9 @@
 #SBATCH --gres=gpu:a100:1
 #SBATCH --partition=ai
 #SBATCH --mem-per-gpu=160GB
-#SBATCH --job-name=llava_100k_all_2ep
-#SBATCH --output=logs/llava_100k_all_2ep.out
-#SBATCH --error=logs/llava_100k_all_2ep.err
+#SBATCH --job-name=llava_100k_all_3ep_lr_5e4
+#SBATCH --output=logs/llava_100k_all_3ep_lr_5e4.out
+#SBATCH --error=logs/llava_100k_all_3ep_lr_5e4.err
 
 # --- Robust Path Setup ---
 # Use the SLURM_SUBMIT_DIR variable to get the directory where the sbatch command was run.
@@ -41,7 +41,7 @@ MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
 TDC_TASK_GROUP="${2:-All}"
 
-OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_all_100k_${TDC_TASK_GROUP}_2ep_bs64_5e4"
+OUTPUT_DIR="checkpoints/llava_interns1mini_tdc_all_100k_${TDC_TASK_GROUP}_3ep_bs64_5e4"
 
 # Use projector weights if available
 PRETRAIN_ARG=""
@@ -65,16 +65,16 @@ apptainer exec --cleanenv --nv \
   --optim "paged_adamw_8bit" \
   --attn_implementation "flash_attention_2" \
   --bf16 True \
-  --num_train_epochs 5 \
-  --per_device_train_batch_size 2 \
+  --num_train_epochs 3 \
+  --per_device_train_batch_size 4 \
   --per_device_eval_batch_size 1 \
   --logging_steps 1 \
-  --gradient_accumulation_steps 32 \
+  --gradient_accumulation_steps 16 \
   --eval_strategy "no" \
   --save_strategy "no" \
-  --learning_rate 8e-5 \
+  --learning_rate 5e-4 \
   --weight_decay 0.0 \
-  --warmup_ratio 0.1 \
+  --warmup_ratio 0.05 \
   --lr_scheduler_type "cosine" \
   --model_max_length 1024 \
   --gradient_checkpointing True \
