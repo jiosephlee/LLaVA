@@ -32,7 +32,7 @@ MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 # Set the path to your prepared alignment dataset
 DATA_PATH="playground/data/llava_medex_fact_alignment_100k.json"
 
-PROJECTOR_BIN="checkpoints/pretrain_750k/mm_projector.bin"
+PROJECTOR_BIN="checkpoints/pretrain_750k_bs64_1e3/mm_projector.bin"
 
 # Set the output directory for the alignment stage (with unfrozen LM)
 ALIGNMENT_OUTPUT_DIR="checkpoints/pretrain_750k_mid_stage_alignment_100k_medex"

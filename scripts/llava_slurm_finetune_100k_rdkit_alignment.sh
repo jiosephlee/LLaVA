@@ -121,7 +121,7 @@ if [ -n "${ALIGNMENT_CHECKPOINT}" ]; then
 else
   echo "⚠️  WARNING: Alignment checkpoint not found, using original model"
   FINETUNE_MODEL_PATH="${MODEL_NAME}"
-  FINETUNE_PROJECTOR_PATH="checkpoints/pretrain_750k/mm_projector.bin"
+  FINETUNE_PROJECTOR_PATH="checkpoints/pretrain_750k_bs64_1e3/mm_projector.bin"
 fi
 
 apptainer exec --cleanenv --nv \

@@ -29,7 +29,7 @@ MODEL_NAME="jiosephlee/Intern-S1-mini-lm"
 # Molecule encoder model (MolFormer)
 MOLECULE_TOWER="ibm/MoLFormer-XL-both-10pct"
 
-PROJECTOR_BIN="checkpoints/pretrain_750k/mm_projector.bin"
+PROJECTOR_BIN="checkpoints/pretrain_750k_bs64_1e3/mm_projector.bin"
 
 # TDC task group (e.g., Tox, ADMET_group, Skin_Reaction)
 TDC_TASK_GROUP="${1:-All}"
