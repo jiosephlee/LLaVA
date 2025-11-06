@@ -1313,6 +1313,71 @@ def train(attn_implementation=None):
                     args=training_args,
                     **data_module)
 
+    # Debug: Print trainable parameter analysis
+    def count_trainable_params(model, component_name=""):
+        """Count trainable and total parameters in a model component."""
+        trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        total = sum(p.numel() for p in model.parameters())
+        return trainable, total
+
+    rank0_print("\n" + "="*80)
+    rank0_print("TRAINING CONFIGURATION DEBUG")
+    rank0_print("="*80)
+    rank0_print(f"freeze_backbone: {model_args.freeze_backbone}")
+    rank0_print(f"tune_mm_mlp_adapter: {model_args.tune_mm_mlp_adapter}")
+    rank0_print(f"freeze_mm_mlp_adapter: {training_args.freeze_mm_mlp_adapter}")
+    rank0_print(f"lora_enable: {training_args.lora_enable}")
+    
+    # Count backbone/LM parameters
+    if hasattr(model, 'model'):
+        backbone_trainable, backbone_total = count_trainable_params(model.model, "backbone")
+        rank0_print("\nBackbone (LM) parameters:")
+        rank0_print(f"  Trainable: {backbone_trainable:,} ({100*backbone_trainable/backbone_total:.2f}%)")
+        rank0_print(f"  Frozen: {backbone_total - backbone_trainable:,} ({100*(backbone_total-backbone_trainable)/backbone_total:.2f}%)")
+        rank0_print(f"  Total: {backbone_total:,}")
+    else:
+        rank0_print("\nBackbone (LM): Not found or not applicable")
+    
+    # Count projector parameters
+    if hasattr(model, 'get_model') and hasattr(model.get_model(), 'mm_projector'):
+        projector = model.get_model().mm_projector
+        proj_trainable, proj_total = count_trainable_params(projector, "projector")
+        rank0_print("\nProjector (mm_projector) parameters:")
+        rank0_print(f"  Trainable: {proj_trainable:,} ({100*proj_trainable/proj_total:.2f}%)")
+        rank0_print(f"  Frozen: {proj_total - proj_trainable:,} ({100*(proj_total-proj_trainable)/proj_total:.2f}%)")
+        rank0_print(f"  Total: {proj_total:,}")
+    else:
+        rank0_print("\nProjector (mm_projector): Not found or not applicable")
+    
+    # Overall summary
+    all_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    all_total = sum(p.numel() for p in model.parameters())
+    rank0_print("\nOverall model:")
+    rank0_print(f"  Trainable: {all_trainable:,} ({100*all_trainable/all_total:.2f}%)")
+    rank0_print(f"  Frozen: {all_total - all_trainable:,} ({100*(all_total-all_trainable)/all_total:.2f}%)")
+    rank0_print(f"  Total: {all_total:,}")
+    
+    # Answer the question
+    if not model_args.freeze_backbone and not model_args.tune_mm_mlp_adapter:
+        rank0_print("\n✓ Both backbone AND projector should be trainable (freeze_backbone=False, tune_mm_mlp_adapter=False)")
+        if hasattr(model, 'get_model') and hasattr(model.get_model(), 'mm_projector'):
+            backbone_ok = backbone_trainable > 0 if hasattr(model, 'model') else True
+            proj_ok = proj_trainable > 0
+            if backbone_ok and proj_ok:
+                rank0_print("✓ CONFIRMED: Both are trainable")
+            elif not backbone_ok:
+                rank0_print("⚠ WARNING: Backbone is frozen despite freeze_backbone=False")
+            elif not proj_ok:
+                rank0_print("⚠ WARNING: Projector is frozen (check freeze_mm_mlp_adapter)")
+        else:
+            rank0_print("⚠ Cannot verify projector (not found)")
+    elif model_args.freeze_backbone:
+        rank0_print("\n✓ Backbone is frozen (freeze_backbone=True)")
+    elif model_args.tune_mm_mlp_adapter:
+        rank0_print("\n✓ Only projector is trainable (tune_mm_mlp_adapter=True)")
+    
+    rank0_print("="*80 + "\n")
+
     # Start VRAM monitoring
     # torch.cuda.reset_peak_memory_stats()
 
