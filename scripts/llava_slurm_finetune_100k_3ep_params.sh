@@ -49,40 +49,40 @@ if [ -f "${PROJECTOR_BIN}" ]; then
   PRETRAIN_ARG="--pretrain_mm_mlp_adapter ${PROJECTOR_BIN}"
 fi
 
-apptainer exec --cleanenv --nv \
-    --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
-    ${YOUR_SIF_FILE} \
-  python llava/train/train.py \
-  --model_name_or_path "${MODEL_NAME}" \
-  ${PRETRAIN_ARG} \
-  --vision_tower "${MOLECULE_TOWER}" \
-  --version intern \
-  --task_group_name "${TDC_TASK_GROUP}" \
-  --mm_projector_type mlp2x_gelu \
-  --freeze_backbone False \
-  --tune_mm_mlp_adapter False \
-  --output_dir "${OUTPUT_DIR}" \
-  --optim "paged_adamw_8bit" \
-  --attn_implementation "flash_attention_2" \
-  --bf16 True \
-  --num_train_epochs 3 \
-  --per_device_train_batch_size 4 \
-  --per_device_eval_batch_size 1 \
-  --logging_steps 1 \
-  --gradient_accumulation_steps 16 \
-  --eval_strategy "no" \
-  --save_strategy "no" \
-  --learning_rate 5e-4 \
-  --weight_decay 0.0 \
-  --warmup_ratio 0.05 \
-  --lr_scheduler_type "cosine" \
-  --model_max_length 1024 \
-  --gradient_checkpointing True \
-  --dataloader_num_workers 4 \
-  --lazy_preprocess True \
-  --report_to wandb \
-  --debug_mode False \
-  --ensure_image_token_if_missing True \
+# apptainer exec --cleanenv --nv \
+#     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES \
+#     ${YOUR_SIF_FILE} \
+#   python llava/train/train.py \
+#   --model_name_or_path "${MODEL_NAME}" \
+#   ${PRETRAIN_ARG} \
+#   --vision_tower "${MOLECULE_TOWER}" \
+#   --version intern \
+#   --task_group_name "${TDC_TASK_GROUP}" \
+#   --mm_projector_type mlp2x_gelu \
+#   --freeze_backbone False \
+#   --tune_mm_mlp_adapter False \
+#   --output_dir "${OUTPUT_DIR}" \
+#   --optim "paged_adamw_8bit" \
+#   --attn_implementation "flash_attention_2" \
+#   --bf16 True \
+#   --num_train_epochs 3 \
+#   --per_device_train_batch_size 4 \
+#   --per_device_eval_batch_size 1 \
+#   --logging_steps 1 \
+#   --gradient_accumulation_steps 16 \
+#   --eval_strategy "no" \
+#   --save_strategy "no" \
+#   --learning_rate 5e-4 \
+#   --weight_decay 0.0 \
+#   --warmup_ratio 0.05 \
+#   --lr_scheduler_type "cosine" \
+#   --model_max_length 1024 \
+#   --gradient_checkpointing True \
+#   --dataloader_num_workers 4 \
+#   --lazy_preprocess True \
+#   --report_to wandb \
+#   --debug_mode False \
+#   --ensure_image_token_if_missing True \
 
 echo "➤ TDC TRAINING DONE"
 
