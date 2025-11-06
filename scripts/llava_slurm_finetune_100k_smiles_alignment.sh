@@ -3,10 +3,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=12:00:00
-#SBATCH --gres=gpu:a100:1
+#SBATCH --time=24:00:00
+#SBATCH --gres=gpu:a40:1
 #SBATCH --partition=ai
-#SBATCH --mem-per-gpu=160GB
+#SBATCH --mem-per-gpu=96GB
 #SBATCH --job-name=smiles_alignment
 #SBATCH --output=logs/llava_pretrained_750k_smiles_mid_100k_alignment.out
 #SBATCH --error=logs/llava_pretrained_750k_smiles_mid_100k_alignment.err
@@ -43,8 +43,8 @@ TDC_TASK_GROUP="${1:-All}"
 # --- Hyperparameters for Fine-tuning Stage ---
 # These can be overridden via command line arguments
 FINETUNE_EPOCHS="${2:-3}"
-FINETUNE_BATCH_SIZE="${3:-4}"
-FINETUNE_GRAD_ACCUM="${4:-16}"
+FINETUNE_BATCH_SIZE="${3:-2}"
+FINETUNE_GRAD_ACCUM="${4:-32}"
 FINETUNE_LR="${5:-5e-4}"
 
 # Calculate effective batch size for filename
@@ -88,9 +88,9 @@ apptainer exec --cleanenv --nv \
   --optim "paged_adamw_8bit" \
   --attn_implementation "flash_attention_2" \
   --num_train_epochs 1 \
-  --per_device_train_batch_size 16 \
+  --per_device_train_batch_size 8 \
   --per_device_eval_batch_size 1 \
-  --gradient_accumulation_steps 4 \
+  --gradient_accumulation_steps 8 \
   --eval_strategy "no" \
   --save_strategy "no" \
   --save_total_limit 1 \
