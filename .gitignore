@@ -22,7 +22,13 @@ dist
 wandb
 output
 
-checkpoints
+checkpoints/**/*.pt
+checkpoints/**/*.pth
+checkpoints/**/*.bin
+checkpoints/**/*.ckpt
+checkpoints/**/*.safetensors
+checkpoints/**/*.py
+checkpoints/**/*.model 
 ckpts*
 
 .ipynb_checkpoints
