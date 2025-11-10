@@ -1,0 +1,44 @@
+--- Therapeutic Tuning Experiment Summary ---
+
+Model ID: llava_interns1mini_tdc_all_100k_All_3ep_bs64_5e4
+Task Group: All
+Tasks: AMES, BBB_Martins, Bioavailability_Ma, CYP1A2_Veith, CYP2C19_Veith, CYP2C9_Substrate_CarbonMangels, CYP2C9_Veith, CYP2D6_Substrate_CarbonMangels, CYP2D6_Veith, CYP3A4_Substrate_CarbonMangels, CYP3A4_Veith, Carcinogens_Lagunin, ClinTox, DILI, HIA_Hou, SARSCoV2_3CLPro_Diamond, SARSCoV2_Vitro_Touret, Pgp_Broccatelli, Skin_Reaction, hERG, hERG_Karim
+Timestamp: 2025-11-06 20:41:21
+
+--- Overall Performance ---
+Average Validation Score: N/A
+Average Test Score: 0.4212 (±0.0975)
+
+--- Performance on Molecules Covered by Pre-training ---
+Average Validation Score (Covered): N/A
+Average Test Score (Covered): N/A
+
+--- Performance on Molecules NOT Covered by Pre-training ---
+Average Validation Score (Uncovered): N/A
+Average Test Score (Uncovered): N/A
+
+
+--- Detailed Per-Task Results ---
+Task                 | Metric     | Val Overall  | Val Covered  | Val Uncovered  | Test Overall | Test Covered | Test Uncovered
+--------------------------------------------------------------------------------------------------------------------------------
+AMES                 | auroc      | N/A          | N/A          | N/A            | 0.4641       | N/A          | N/A           
+BBB_Martins          | auroc      | N/A          | N/A          | N/A            | 0.3430       | N/A          | N/A           
+Bioavailability_Ma   | auroc      | N/A          | N/A          | N/A            | 0.4774       | N/A          | N/A           
+CYP1A2_Veith         | auprc      | N/A          | N/A          | N/A            | 0.4920       | N/A          | N/A           
+CYP2C19_Veith        | auroc      | N/A          | N/A          | N/A            | 0.3687       | N/A          | N/A           
+CYP2C9_Substrate_CarbonMangels | auprc      | N/A          | N/A          | N/A            | 0.2693       | N/A          | N/A           
+CYP2C9_Veith         | auprc      | N/A          | N/A          | N/A            | 0.3510       | N/A          | N/A           
+CYP2D6_Substrate_CarbonMangels | auprc      | N/A          | N/A          | N/A            | 0.3448       | N/A          | N/A           
+CYP2D6_Veith         | auprc      | N/A          | N/A          | N/A            | 0.1919       | N/A          | N/A           
+CYP3A4_Substrate_CarbonMangels | auroc      | N/A          | N/A          | N/A            | 0.4782       | N/A          | N/A           
+CYP3A4_Veith         | auprc      | N/A          | N/A          | N/A            | 0.4588       | N/A          | N/A           
+Carcinogens_Lagunin  | accuracy   | N/A          | N/A          | N/A            | 0.2679       | N/A          | N/A           
+ClinTox              | auroc      | N/A          | N/A          | N/A            | 0.4943       | N/A          | N/A           
+DILI                 | auroc      | N/A          | N/A          | N/A            | 0.4928       | N/A          | N/A           
+HIA_Hou              | auroc      | N/A          | N/A          | N/A            | 0.4525       | N/A          | N/A           
+SARSCoV2_3CLPro_Diamond | auroc      | N/A          | N/A          | N/A            | 0.5442       | N/A          | N/A           
+SARSCoV2_Vitro_Touret | auroc      | N/A          | N/A          | N/A            | 0.5666       | N/A          | N/A           
+Pgp_Broccatelli      | auroc      | N/A          | N/A          | N/A            | 0.3453       | N/A          | N/A           
+Skin_Reaction        | auroc      | N/A          | N/A          | N/A            | 0.4456       | N/A          | N/A           
+hERG                 | auroc      | N/A          | N/A          | N/A            | 0.5031       | N/A          | N/A           
+hERG_Karim           | accuracy   | N/A          | N/A          | N/A            | 0.4937       | N/A          | N/A           
